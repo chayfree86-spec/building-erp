@@ -13,7 +13,6 @@ import { Search, RotateCcw, ShoppingCart, Plus, Eye, Check, X, Truck } from 'luc
 import toast from 'react-hot-toast';
 import { purchasesApi } from '@/services/api-endpoints';
 import { useQueryClient } from '@tanstack/react-query';
-import type { Purchase, PurchaseStatus } from '@/types';
 
 const statusOptions = [
   { value: 'draft', label: 'Draft' },
@@ -31,7 +30,7 @@ export function PurchasesPage() {
   const [status, setStatus] = useState('');
 
   const { data, isLoading, isError, refetch } = usePurchases({ search: search || undefined, status: status || undefined });
-  const purchases = (data as any)?.data || [];
+  const purchases = (data as any)?.items || [];
 
   const handleAction = async (id: number, action: string) => {
     try {

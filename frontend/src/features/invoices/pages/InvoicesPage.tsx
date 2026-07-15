@@ -28,7 +28,7 @@ export function InvoicesPage() {
   const [status, setStatus] = useState('');
 
   const { data, isLoading, isError, refetch } = useInvoices({ search: search || undefined, status: status || undefined });
-  const invoices = (data as any)?.data || [];
+  const invoices = (data as any)?.items || [];
 
   const handleAction = async (id: number, action: string) => {
     try {

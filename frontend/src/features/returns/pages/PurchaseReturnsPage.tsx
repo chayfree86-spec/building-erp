@@ -17,7 +17,7 @@ export function PurchaseReturnsPage() {
   const [status, setStatus] = useState('');
 
   const { data, isLoading, isError, refetch } = usePurchaseReturns({ search: search || undefined, status: status || undefined });
-  const returns = (data as any)?.data || [];
+  const returns = (data as any)?.items || [];
 
   return (
     <div className="space-y-6">

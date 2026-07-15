@@ -1,14 +1,16 @@
-import { AlertCircle, FileX, WifiOff, ShieldOff } from 'lucide-react';
+import { AlertCircle, FileX, WifiOff, ShieldOff, type LucideIcon } from 'lucide-react';
 import { Button } from './Button';
+
+type IconKey = 'empty' | 'error' | 'offline' | 'denied';
 
 interface EmptyStateProps {
   title?: string;
   description?: string;
-  icon?: 'empty' | 'error' | 'offline' | 'denied';
+  icon?: IconKey | LucideIcon;
   action?: { label: string; onClick: () => void };
 }
 
-const icons = {
+const builtinIcons: Record<IconKey, LucideIcon> = {
   empty: FileX,
   error: AlertCircle,
   offline: WifiOff,
@@ -16,7 +18,7 @@ const icons = {
 };
 
 export function EmptyState({ title = 'No data found', description, icon = 'empty', action }: EmptyStateProps) {
-  const Icon = icons[icon];
+  const Icon: LucideIcon = typeof icon === 'string' ? builtinIcons[icon] || FileX : icon;
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4">
       <div className="w-16 h-16 rounded-2xl bg-neutral-100 flex items-center justify-center mb-4">

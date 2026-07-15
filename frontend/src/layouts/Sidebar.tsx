@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Receipt, ShoppingCart, Package, Users, Truck, CreditCard,
   RotateCcw, ArrowRightLeft, BarChart3, Shield, FileText, Settings,
-  ChevronLeft, ChevronRight
+  ChevronLeft, ChevronRight, Boxes
 } from 'lucide-react';
 import { useAuth } from '@/features/auth/auth-context';
 
@@ -28,6 +28,18 @@ const navItems: NavItem[] = [
   { label: 'Users & Roles', icon: Shield, path: '/users' },
   { label: 'Audit Logs', icon: FileText, path: '/audit-logs' },
   { label: 'Settings', icon: Settings, path: '/settings' },
+  {
+    label: 'Masters', icon: Boxes, path: '/products',
+    children: [
+      { label: 'Products', path: '/products' },
+      { label: 'Categories', path: '/categories' },
+      { label: 'Units', path: '/units' },
+      { label: 'Brands', path: '/brands' },
+      { label: 'GST Rates', path: '/gst-rates' },
+      { label: 'Stores', path: '/stores' },
+      { label: 'Payment Modes', path: '/payment-modes' },
+    ],
+  },
 ];
 
 interface SidebarProps {
@@ -51,22 +63,54 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive: active }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group ${
-                active || isActive(item.path)
-                  ? 'bg-primary-50 text-primary-700'
-                  : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
-              }`
-            }
-          >
-            <item.icon className={`w-5 h-5 shrink-0 ${isActive(item.path) ? 'text-primary-600' : 'text-neutral-400 group-hover:text-neutral-600'}`} />
-            {!collapsed && <span className="whitespace-nowrap">{item.label}</span>}
-          </NavLink>
-        ))}
+        {navItems.map((item) => {
+          const active = isActive(item.path);
+          if (item.children && item.children.length > 0) {
+            return (
+              <div key={item.path}>
+                <NavLink
+                  to={item.path}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group ${
+                    active ? 'bg-primary-50 text-primary-700' : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+                  }`}
+                >
+                  <item.icon className={`w-5 h-5 shrink-0 ${active ? 'text-primary-600' : 'text-neutral-400 group-hover:text-neutral-600'}`} />
+                  {!collapsed && <span className="whitespace-nowrap">{item.label}</span>}
+                </NavLink>
+                {!collapsed && (
+                  <div className="ml-4 mt-0.5 space-y-0.5 border-l border-neutral-100">
+                    {item.children.map((child) => {
+                      const childActive = isActive(child.path);
+                      return (
+                        <NavLink
+                          key={child.path}
+                          to={child.path}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all duration-150 ${
+                            childActive ? 'text-primary-700 font-medium bg-primary-50/50' : 'text-neutral-500 hover:text-neutral-700 hover:bg-neutral-50'
+                          }`}
+                        >
+                          {!collapsed && <span className="whitespace-nowrap">{child.label}</span>}
+                        </NavLink>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          }
+          return (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group ${
+                active ? 'bg-primary-50 text-primary-700' : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+              }`}
+            >
+              <item.icon className={`w-5 h-5 shrink-0 ${active ? 'text-primary-600' : 'text-neutral-400 group-hover:text-neutral-600'}`} />
+              {!collapsed && <span className="whitespace-nowrap">{item.label}</span>}
+            </NavLink>
+          );
+        })}
       </nav>
 
       {/* User */}

@@ -20,6 +20,8 @@ class DatabaseSeeder extends Seeder
             PaymentModeSeeder::class,
             RoleAndPermissionSeeder::class,
             SuperAdminSeeder::class,
+            SettingSeeder::class,
+            NumberSeriesSeeder::class,
         ]);
     }
 }

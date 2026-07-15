@@ -13,13 +13,16 @@ export function StockPage() {
   const [status, setStatus] = useState('');
 
   const { data, isLoading, isError, refetch } = useStock({ search: search || undefined });
-  const items = (data as any)?.data || [];
+  const items = (data as any)?.items || [];
+
+  // fallback if items is still not array
+  const safeItems = Array.isArray(items) ? items : [];
 
   const filtered = search
-    ? items.filter((item: any) =>
+    ? safeItems.filter((item: any) =>
         (item.product?.name || '').toLowerCase().includes(search.toLowerCase()) ||
         (item.batch_no || '').toLowerCase().includes(search.toLowerCase()))
-    : items;
+    : safeItems;
 
   return (
     <div className="space-y-6">

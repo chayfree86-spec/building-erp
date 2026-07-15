@@ -5,6 +5,7 @@ const mobileItems = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
   { label: 'Sales', icon: Receipt, path: '/invoices' },
   { label: 'Purchase', icon: ShoppingCart, path: '/purchases' },
+  { label: 'Products', icon: Package, path: '/products' },
   { label: 'Stock', icon: Package, path: '/stock' },
   { label: 'More', icon: MoreHorizontal, path: '/more' },
 ];

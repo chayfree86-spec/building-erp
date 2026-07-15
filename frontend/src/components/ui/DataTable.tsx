@@ -26,6 +26,8 @@ export function DataTable<T>({
   columns, data, keyExtractor, loading, emptyMessage = 'No records found.',
   onRowClick, page = 1, totalPages = 1, onPageChange,
 }: DataTableProps<T>) {
+  const safeData = Array.isArray(data) ? data : [];
+
   if (loading) {
     return (
       <div className="card overflow-hidden">
@@ -38,7 +40,7 @@ export function DataTable<T>({
     );
   }
 
-  if (data.length === 0) {
+  if (safeData.length === 0) {
     return (
       <div className="card p-12 text-center">
         <p className="text-neutral-500">{emptyMessage}</p>
@@ -61,7 +63,7 @@ export function DataTable<T>({
             </tr>
           </thead>
           <tbody>
-            {data.map(item => (
+            {safeData.map(item => (
               <tr
                 key={keyExtractor(item)}
                 onClick={() => onRowClick?.(item)}
@@ -80,7 +82,7 @@ export function DataTable<T>({
 
       {/* Mobile Cards */}
       <div className="md:hidden divide-y divide-neutral-100">
-        {data.map(item => (
+        {safeData.map(item => (
           <div key={keyExtractor(item)} onClick={() => onRowClick?.(item)} className="p-4 hover:bg-neutral-50 transition-colors">
             {columns.filter(c => !c.hideOnMobile).map((col, i) => (
               <div key={col.key} className={`flex items-center justify-between ${i > 0 ? 'mt-2' : ''}`}>

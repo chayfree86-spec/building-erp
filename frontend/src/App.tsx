@@ -12,7 +12,7 @@ const ProductsPage = lazy(() => import('@/features/products/pages/ProductsPage')
 const CustomersPage = lazy(() => import('@/features/customers/pages/CustomersPage').then(m => ({ default: m.CustomersPage })));
 const SuppliersPage = lazy(() => import('@/features/suppliers/pages/SuppliersPage').then(m => ({ default: m.SuppliersPage })));
 
-// Master pages from combined module
+// Master pages
 const StoresPageComp = lazy(() => import('@/features/stores/pages/MasterPages').then(m => ({ default: m.StoresPage })));
 const UnitsPageComp = lazy(() => import('@/features/stores/pages/MasterPages').then(m => ({ default: m.UnitsPage })));
 const CategoriesPageComp = lazy(() => import('@/features/stores/pages/MasterPages').then(m => ({ default: m.CategoriesPage })));
@@ -20,41 +20,47 @@ const BrandsPageComp = lazy(() => import('@/features/stores/pages/MasterPages').
 const GstRatesPageComp = lazy(() => import('@/features/stores/pages/MasterPages').then(m => ({ default: m.GstRatesPage })));
 const PaymentModesPageComp = lazy(() => import('@/features/stores/pages/MasterPages').then(m => ({ default: m.PaymentModesPage })));
 
-const P = ({ title }: { title: string }) => (
+// Transaction pages
+const PurchasesPage = lazy(() => import('@/features/purchases/pages/PurchasesPage').then(m => ({ default: m.PurchasesPage })));
+const InvoicesPage = lazy(() => import('@/features/invoices/pages/InvoicesPage').then(m => ({ default: m.InvoicesPage })));
+const StockPage = lazy(() => import('@/features/stock/pages/StockPage').then(m => ({ default: m.StockPage })));
+const CustomerPaymentsPage = lazy(() => import('@/features/payments/pages/CustomerPaymentsPage').then(m => ({ default: m.CustomerPaymentsPage })));
+const PurchaseReturnsPage = lazy(() => import('@/features/returns/pages/PurchaseReturnsPage').then(m => ({ default: m.PurchaseReturnsPage })));
+const StockTransfersPage = lazy(() => import('@/features/transfers/pages/StockTransfersPage').then(m => ({ default: m.StockTransfersPage })));
+const StockAdjustmentsPage = lazy(() => import('@/features/adjustments/pages/StockAdjustmentsPage').then(m => ({ default: m.StockAdjustmentsPage })));
+
+// Admin pages
+const UsersPage = lazy(() => import('@/features/users/pages/UsersPage').then(m => ({ default: m.UsersPage })));
+const RolesPage = lazy(() => import('@/features/roles/pages/RolesPage').then(m => ({ default: m.RolesPage })));
+const AuditLogsPage = lazy(() => import('@/features/audit/pages/AuditLogsPage').then(m => ({ default: m.AuditLogsPage })));
+const SettingsPage = lazy(() => import('@/features/settings/pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const ReportsPage = lazy(() => import('@/features/reports/pages/ReportsPage').then(m => ({ default: m.ReportsPage })));
+
+// Ledger pages
+const CustomerLedgerPage = lazy(() => import('@/features/ledgers/pages/LedgerPages').then(m => ({ default: m.CustomerLedgerPage })));
+const SupplierLedgerPage = lazy(() => import('@/features/ledgers/pages/LedgerPages').then(m => ({ default: m.SupplierLedgerPage })));
+const InventoryLedgerPage = lazy(() => import('@/features/ledgers/pages/LedgerPages').then(m => ({ default: m.InventoryLedgerPage })));
+
+// Simple placeholder for pages not yet fully built
+const Placeholder = ({ title }: { title: string }) => (
   <div className="space-y-4">
     <h1 className="text-2xl font-bold text-neutral-900">{title}</h1>
-    <div className="card p-8 text-center"><p className="text-neutral-500">Coming soon — {title.toLowerCase()} module.</p></div>
+    <div className="card p-8 text-center"><p className="text-neutral-500">This module is available via backend API. Full UI coming soon.</p></div>
   </div>
 );
-
-const make = (t: string) => lazy(() => Promise.resolve({ default: () => <P title={t} /> }));
+const make = (t: string) => lazy(() => Promise.resolve({ default: () => <Placeholder title={t} /> }));
 
 const ProductDetailPage = make('Product Detail');
 const CustomerDetailPage = make('Customer Detail');
 const SupplierDetailPage = make('Supplier Detail');
-const PurchasesPage = make('Purchases');
 const PurchaseNewPage = make('New Purchase');
 const PurchaseDetailPage = make('Purchase Detail');
-const PurchaseReturnsPage = make('Purchase Returns');
-const InvoicesPage = make('Invoices');
 const InvoiceNewPage = make('New Invoice');
 const InvoiceDetailPage = make('Invoice Detail');
 const SalesReturnsPage = make('Sales Returns');
-const CustomerPaymentsPage = make('Customer Payments');
 const SupplierPaymentsPage = make('Supplier Payments');
-const StockPage = make('Stock');
 const StockBatchPage = make('Stock Batches');
-const StockAdjustmentsPage = make('Stock Adjustments');
-const StockTransfersPage = make('Stock Transfers');
-const CustomerLedgerPage = make('Customer Ledger');
-const SupplierLedgerPage = make('Supplier Ledger');
-const InventoryLedgerPage = make('Inventory Ledger');
-const ReportsPage = make('Reports');
-const UsersPage = make('Users');
-const RolesPage = make('Roles');
 const PermissionsPage = make('Permissions');
-const AuditLogsPage = make('Audit Logs');
-const SettingsPage = make('Settings');
 const MorePage = make('More');
 
 const PageLoader = () => <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 text-primary-600 animate-spin" /></div>;

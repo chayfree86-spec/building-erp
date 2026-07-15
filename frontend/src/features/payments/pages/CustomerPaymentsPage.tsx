@@ -27,7 +27,7 @@ export function CustomerPaymentsPage() {
   const [status, setStatus] = useState('');
 
   const { data, isLoading, isError, refetch } = useCustomerPayments({ search: search || undefined, status: status || undefined });
-  const payments = (data as any)?.data || [];
+  const payments = (data as any)?.items || [];
 
   const handleAction = async (id: number, action: string) => {
     try {
