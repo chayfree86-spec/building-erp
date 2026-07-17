@@ -51,7 +51,7 @@ export function DataTable<T>({
   return (
     <div className="card overflow-hidden">
       {/* Desktop Table */}
-      <div className="hidden md:block overflow-x-auto">
+      <div className="hidden md:block">
         <table className="w-full">
           <thead>
             <tr className="border-b border-neutral-100 bg-neutral-50/50">

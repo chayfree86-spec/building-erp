@@ -4,9 +4,10 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Plus, Trash2, Loader2, Save, Send, Calculator } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Loader2, Save, Send, Calculator, Truck, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Select } from '@/components/ui/Select';
+import { DatePicker } from '@/components/ui/DatePicker';
 import { purchasesApi, productsApi, suppliersApi, storesApi } from '@/services/api-endpoints';
 import { useAuth } from '@/features/auth/auth-context';
 import { formatCurrency } from '@/utils/format';
@@ -39,7 +40,8 @@ type FormData = z.infer<typeof formSchema>;
 export function PurchaseNewPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { activeStoreId } = useAuth();
+  const { activeStoreId, stores } = useAuth();
+  const resolvedStoreId = activeStoreId !== 'all' ? Number(activeStoreId) : (stores[0]?.id || 1);
 
   const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -56,6 +58,41 @@ export function PurchaseNewPage() {
   const [items, setItems] = useState<FormData['items']>([]);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
 
+  // Quick-add supplier modal
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [quickName, setQuickName] = useState('');
+  const [quickMobile, setQuickMobile] = useState('');
+  const [quickEmail, setQuickEmail] = useState('');
+  const [quickGst, setQuickGst] = useState('');
+  const [quickSaving, setQuickSaving] = useState(false);
+
+  const quickAddSupplier = async () => {
+    if (!quickName.trim()) { toast.error('Supplier name is required'); return; }
+    setQuickSaving(true);
+    try {
+      const { data } = await suppliersApi.create({
+        name: quickName.trim(),
+        mobile: quickMobile.trim() || null,
+        email: quickEmail.trim() || null,
+        gst_number: quickGst.trim() || null,
+        opening_balance: 0,
+        opening_balance_type: 'credit',
+        status: 'active',
+      });
+      const newSup = data.data || data;
+      toast.success('Supplier added!');
+      queryClient.invalidateQueries({ queryKey: ['suppliers-list'] });
+      setValue('supplier_id', newSup.id);
+      setSelectedSupplier(newSup);
+      setShowQuickAdd(false);
+      setQuickName(''); setQuickMobile(''); setQuickEmail(''); setQuickGst('');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to add supplier');
+    } finally {
+      setQuickSaving(false);
+    }
+  };
+
   // Fetch data
   const { data: suppliersData } = useQuery({
     queryKey: ['suppliers-list'],
@@ -63,7 +100,15 @@ export function PurchaseNewPage() {
   });
   const { data: productsData } = useQuery({
     queryKey: ['products-list'],
-    queryFn: async () => { const { data } = await productsApi.list({ per_page: 500 }); return data.data?.data || data.data || []; },
+    queryFn: async () => {
+      const res = await productsApi.list({ per_page: 500 });
+      const responseData = (res as any)?.data;
+      if (Array.isArray(responseData)) return responseData;
+      if (Array.isArray(responseData?.data)) return responseData.data;
+      if (Array.isArray(responseData?.data?.data)) return responseData.data.data;
+      return [];
+    },
+    staleTime: 5 * 60 * 1000,
   });
 
   const suppliers: Supplier[] = Array.isArray(suppliersData) ? suppliersData : [];
@@ -78,7 +123,14 @@ export function PurchaseNewPage() {
       navigate(`/purchases/${res.data.data.id}`);
     },
     onError: (err: any) => {
-      toast.error(err?.response?.data?.message || 'Failed to create purchase');
+      const errors = err?.response?.data?.errors;
+      if (errors) {
+        const firstError = Object.values(errors)[0];
+        const msg = Array.isArray(firstError) ? firstError[0] : firstError;
+        toast.error(String(msg));
+      } else {
+        toast.error(err?.response?.data?.message || 'Failed to create purchase');
+      }
     },
   });
 
@@ -135,32 +187,35 @@ export function PurchaseNewPage() {
   };
 
   const updateItem = (index: number, field: string, value: any) => {
-    const updated = [...items];
-    const item = { ...updated[index], [field]: value };
-
-    // When product changes, auto-fill GST rate
-    if (field === 'product_id') {
-      const product = products.find(p => p.id === Number(value));
-      if (product?.gstRate) {
-        item.gst_rate = Number(product.gstRate.rate) || 0;
+    setItems(prev => {
+      const updated = [...prev];
+      const item = { ...updated[index], [field]: value };
+      if (field === 'product_id') {
+        const product = products.find(p => p.id === Number(value));
+        const gstRate = (product as any)?.gst_rate;
+        if (gstRate?.rate) {
+          item.gst_rate = Number(gstRate.rate) || 0;
+        }
       }
-    }
-
-    // Recalculate
-    updated[index] = recalcItem(item);
-    setItems(updated);
-    setValue('items', updated);
+      updated[index] = recalcItem(item);
+      if (field === 'product_id' && Number(value) > 0 && index === prev.length - 1) {
+        updated.push({ product_id: 0, quantity: 1, purchase_price: 0, selling_price: 0, gst_rate: 0, discount_amount: 0, taxable_amount: 0, tax_amount: 0, line_total: 0 });
+      }
+      setValue('items', updated);
+      return updated;
+    });
   };
 
   // ─── Submit ───
   const onSubmit = async (data: FormData) => {
-    if (items.length === 0) {
+    const validItems = items.filter(i => Number(i.product_id) > 0);
+    if (validItems.length === 0) {
       toast.error('Add at least one item');
       return;
     }
 
     const payload = {
-      store_id: activeStoreId,
+      store_id: resolvedStoreId,
       supplier_id: data.supplier_id,
       purchase_date: data.purchase_date,
       supplier_invoice_number: data.supplier_invoice_number || undefined,
@@ -171,16 +226,16 @@ export function PurchaseNewPage() {
       additional_cost: 0,
       round_off: 0,
       total_amount: Math.round(totals.total * 100) / 100,
-      items: items.map(item => ({
+      items: validItems.map(item => ({
         product_id: item.product_id,
-        quantity: item.quantity,
-        purchase_price: item.purchase_price,
-        selling_price: item.selling_price || 0,
-        discount_amount: item.discount_amount,
-        taxable_amount: item.taxable_amount,
-        gst_rate: item.gst_rate,
-        tax_amount: item.tax_amount,
-        line_total: item.line_total,
+        quantity: Number(item.quantity) || 0,
+        purchase_price: Number(item.purchase_price) || 0,
+        selling_price: Number(item.selling_price) || 0,
+        discount_amount: Number(item.discount_amount) || 0,
+        taxable_amount: Number(item.taxable_amount) || 0,
+        gst_rate: Number(item.gst_rate) || 0,
+        tax_amount: Number(item.tax_amount) || 0,
+        line_total: Number(item.line_total) || 0,
       })),
     };
 
@@ -188,7 +243,7 @@ export function PurchaseNewPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
         <button onClick={() => navigate('/purchases')} className="p-2 hover:bg-neutral-100 rounded-lg">
@@ -203,48 +258,70 @@ export function PurchaseNewPage() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Header Card */}
         <div className="card p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="flex items-center gap-2 mb-5">
+            <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
+              <Truck className="w-4 h-4 text-orange-600" />
+            </div>
+            <h2 className="text-base font-semibold text-neutral-900 flex-1">Supplier & Purchase Info</h2>
+            <button type="button" onClick={() => setShowQuickAdd(true)} className="btn-primary text-xs py-1.5 px-3 gap-1.5">
+              <Truck className="w-3.5 h-3.5" /> New Supplier
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Supplier */}
-            <Select
-              label="Supplier *"
-              options={suppliers.map(s => ({ value: s.id, label: s.name, sub: s.mobile || '' }))}
-              value={watch('supplier_id') || ''}
-              onChange={(val) => {
-                const id = Number(val);
-                setValue('supplier_id', id);
-                setSelectedSupplier(suppliers.find(s => s.id === id) || null);
-              }}
-              placeholder="Select supplier..."
-              error={errors.supplier_id?.message}
-            />
+            <div>
+              <label className="label">Supplier <span className="text-red-500">*</span></label>
+              <Select
+                options={suppliers.map(s => ({ value: s.id, label: s.name, sub: s.mobile || '' }))}
+                value={watch('supplier_id') || ''}
+                onChange={(val) => {
+                  const id = Number(val);
+                  setValue('supplier_id', id);
+                  setSelectedSupplier(suppliers.find(s => s.id === id) || null);
+                }}
+                placeholder="Search & select supplier..."
+                error={errors.supplier_id?.message}
+              />
+            </div>
 
             {/* Date */}
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">Purchase Date *</label>
-              <input type="date" className="input-field w-full" {...register('purchase_date')} />
-              {errors.purchase_date && <p className="text-red-500 text-xs mt-1">{errors.purchase_date.message}</p>}
+              <DatePicker
+                label="Purchase Date *"
+                value={watch('purchase_date')}
+                onChange={(val) => setValue('purchase_date', val)}
+                error={errors.purchase_date?.message}
+              />
             </div>
 
             {/* Supplier Invoice # */}
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">Supplier Invoice #</label>
-              <input type="text" className="input-field w-full" placeholder="Optional" {...register('supplier_invoice_number')} />
+              <label className="label">Supplier Invoice #</label>
+              <input type="text" className="input-field w-full" placeholder="Supplier's bill number" {...register('supplier_invoice_number')} />
             </div>
 
             {/* Remarks */}
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">Remarks</label>
-              <input type="text" className="input-field w-full" placeholder="Optional" {...register('remarks')} />
+              <label className="label">Remarks</label>
+              <input type="text" className="input-field w-full" placeholder="Any notes about this purchase..." {...register('remarks')} />
             </div>
           </div>
 
           {/* Selected supplier info */}
           {selectedSupplier && (
-            <div className="mt-4 p-3 bg-neutral-50 rounded-lg text-sm text-neutral-600 space-y-1">
-              <p><span className="font-medium">GST:</span> {selectedSupplier.gst_number || 'N/A'}</p>
-              {selectedSupplier.addresses?.[0] && (
-                <p><span className="font-medium">Address:</span> {selectedSupplier.addresses[0].address}, {selectedSupplier.addresses[0].city} {selectedSupplier.addresses[0].state} - {selectedSupplier.addresses[0].pincode}</p>
-              )}
+            <div className="mt-4 p-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl border border-orange-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
+                  <span className="text-orange-700 font-bold text-sm">{selectedSupplier.name.charAt(0)}</span>
+                </div>
+                <div>
+                  <p className="font-semibold text-neutral-900">{selectedSupplier.name}</p>
+                  <div className="flex items-center gap-3 text-xs text-neutral-500 mt-0.5">
+                    {selectedSupplier.mobile && <span>{selectedSupplier.mobile}</span>}
+                    <span>GST: {selectedSupplier.gst_number || 'N/A'}</span>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -263,19 +340,19 @@ export function PurchaseNewPage() {
               <p>No items added yet. Click "Add Item" to start.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <div className="overflow-visible">
+              <table className="w-full text-sm" style={{ overflow: 'visible' }}>
                 <thead>
                   <tr className="border-b text-left text-neutral-500">
-                    <th className="pb-2 font-medium w-8">#</th>
-                    <th className="pb-2 font-medium">Product</th>
-                    <th className="pb-2 font-medium text-right w-20">Qty</th>
-                    <th className="pb-2 font-medium text-right w-28">Purch. Price</th>
-                    <th className="pb-2 font-medium text-right w-28">Selling Price</th>
-                    <th className="pb-2 font-medium text-right w-20">Disc.</th>
-                    <th className="pb-2 font-medium text-right w-20">GST%</th>
-                    <th className="pb-2 font-medium text-right w-24">Tax Amt</th>
-                    <th className="pb-2 font-medium text-right w-28">Line Total</th>
+                    <th className="pb-2 font-medium w-8 px-2">#</th>
+                    <th className="pb-2 font-medium px-2">Product</th>
+                    <th className="pb-2 font-medium text-right w-20 px-2">Qty</th>
+                    <th className="pb-2 font-medium text-right w-28 px-2">Purch. Price</th>
+                    <th className="pb-2 font-medium text-right w-28 px-2">Selling Price</th>
+                    <th className="pb-2 font-medium text-right w-20 px-2">Disc.</th>
+                    <th className="pb-2 font-medium text-right w-20 px-2">GST%</th>
+                    <th className="pb-2 font-medium text-right w-24 px-2">Tax Amt</th>
+                    <th className="pb-2 font-medium text-right w-28 px-2">Line Total</th>
                     <th className="pb-2 w-10"></th>
                   </tr>
                 </thead>
@@ -284,8 +361,8 @@ export function PurchaseNewPage() {
                     const product = products.find(p => p.id === Number(item.product_id));
                     return (
                       <tr key={idx} className="border-b border-neutral-100 hover:bg-neutral-50">
-                        <td className="py-2 text-neutral-400">{idx + 1}</td>
-                        <td className="py-2">
+                        <td className="py-3 px-2 text-neutral-400 align-middle">{idx + 1}</td>
+                        <td className="py-3 px-2 align-middle overflow-visible">
                           <Select
                             compact
                             options={products.map(p => ({ value: p.id, label: p.name, sub: p.sku || '' }))}
@@ -294,58 +371,58 @@ export function PurchaseNewPage() {
                             placeholder="Select..."
                           />
                         </td>
-                        <td className="py-2">
+                        <td className="py-3 px-2 align-middle">
                           <input
                             type="number"
-                            className="input-field w-full text-right text-sm py-1"
+                            className="input-field w-full text-right text-sm"
                             min="0.001" step="0.001"
                             value={item.quantity || ''}
                             onChange={(e) => updateItem(idx, 'quantity', Number(e.target.value))}
                           />
                         </td>
-                        <td className="py-2">
+                        <td className="py-3 px-2 align-middle">
                           <input
                             type="number"
-                            className="input-field w-full text-right text-sm py-1"
+                            className="input-field w-full text-right text-sm"
                             min="0" step="0.01"
                             value={item.purchase_price || ''}
                             onChange={(e) => updateItem(idx, 'purchase_price', Number(e.target.value))}
                           />
                         </td>
-                        <td className="py-2">
+                        <td className="py-3 px-2 align-middle">
                           <input
                             type="number"
-                            className="input-field w-full text-right text-sm py-1"
+                            className="input-field w-full text-right text-sm"
                             min="0" step="0.01"
                             value={item.selling_price || ''}
                             onChange={(e) => updateItem(idx, 'selling_price', Number(e.target.value))}
                           />
                         </td>
-                        <td className="py-2">
+                        <td className="py-3 px-2 align-middle">
                           <input
                             type="number"
-                            className="input-field w-full text-right text-sm py-1"
+                            className="input-field w-full text-right text-sm"
                             min="0" step="0.01"
                             value={item.discount_amount || ''}
                             onChange={(e) => updateItem(idx, 'discount_amount', Number(e.target.value))}
                           />
                         </td>
-                        <td className="py-2">
+                        <td className="py-3 px-2 align-middle">
                           <input
                             type="number"
-                            className="input-field w-full text-right text-sm py-1"
+                            className="input-field w-full text-right text-sm"
                             min="0" step="0.01"
                             value={item.gst_rate || ''}
                             onChange={(e) => updateItem(idx, 'gst_rate', Number(e.target.value))}
                           />
                         </td>
-                        <td className="py-2 text-right font-mono text-neutral-600">
+                        <td className="py-3 px-2 text-right font-mono text-neutral-600 align-middle">
                           {formatCurrency(item.tax_amount)}
                         </td>
-                        <td className="py-2 text-right font-semibold font-mono">
+                        <td className="py-3 px-2 text-right font-semibold font-mono align-middle">
                           {formatCurrency(item.line_total)}
                         </td>
-                        <td className="py-2">
+                        <td className="py-3 align-middle">
                           <button type="button" onClick={() => removeItem(idx)} className="p-1 text-red-400 hover:text-red-600">
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -402,6 +479,44 @@ export function PurchaseNewPage() {
           </button>
         </div>
       </form>
+
+      {/* Quick Add Supplier Modal */}
+      {showQuickAdd && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowQuickAdd(false)} />
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6 animate-[fadeIn_150ms_ease]">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-lg font-semibold text-neutral-900">Add New Supplier</h3>
+              <button onClick={() => setShowQuickAdd(false)} className="p-1.5 hover:bg-neutral-100 rounded-lg"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="label">Name <span className="text-red-500">*</span></label>
+                <input type="text" className="input-field w-full" placeholder="Supplier name" value={quickName} onChange={e => setQuickName(e.target.value)} autoFocus onKeyDown={e => e.key === 'Enter' && quickAddSupplier()} />
+              </div>
+              <div>
+                <label className="label">Mobile</label>
+                <input type="text" className="input-field w-full" placeholder="Mobile number" value={quickMobile} onChange={e => setQuickMobile(e.target.value)} />
+              </div>
+              <div>
+                <label className="label">Email</label>
+                <input type="email" className="input-field w-full" placeholder="Email address" value={quickEmail} onChange={e => setQuickEmail(e.target.value)} />
+              </div>
+              <div>
+                <label className="label">GST Number</label>
+                <input type="text" className="input-field w-full" placeholder="GSTIN" value={quickGst} onChange={e => setQuickGst(e.target.value)} />
+              </div>
+            </div>
+            <div className="flex items-center gap-3 justify-end mt-6">
+              <button type="button" onClick={() => setShowQuickAdd(false)} className="btn btn-secondary text-sm">Cancel</button>
+              <button type="button" onClick={quickAddSupplier} disabled={quickSaving || !quickName.trim()} className="btn btn-primary text-sm flex items-center gap-2">
+                {quickSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Truck className="w-4 h-4" />}
+                Add Supplier
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

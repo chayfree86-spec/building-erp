@@ -18,7 +18,7 @@ export function ProductDetailPage() {
   if (isError || !product) return <div className="card p-8 text-center text-red-500">Failed to load product.</div>;
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6">
       <div className="flex items-center gap-4">
         <button onClick={() => navigate('/products')} className="p-2 hover:bg-neutral-100 rounded-lg"><ArrowLeft className="w-5 h-5" /></button>
         <div>

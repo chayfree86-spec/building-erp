@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
 
 interface Option {
@@ -29,7 +29,13 @@ export function Select({ options, value, onChange, placeholder = 'Select...', la
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const selected = options.find(o => String(o.value) === String(value));
+  // Find selected option from current options OR remember last known selection
+  const selected = useMemo(() => {
+    if (value === undefined || value === null || value === '') return undefined;
+    const match = options.find(o => String(o.value) === String(value));
+    return match;
+  }, [options, value]);
+
   const btnClass = compact
     ? `w-full border border-neutral-200 rounded-lg bg-white text-left flex items-center justify-between text-sm py-1.5 px-2 ${error ? '!border-red-400' : ''} ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'} ${className}`
     : `input-field flex items-center justify-between text-left ${error ? '!border-red-400' : ''} ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'} ${className}`;
@@ -44,19 +50,19 @@ export function Select({ options, value, onChange, placeholder = 'Select...', la
           onClick={() => !disabled && setOpen(!open)}
           className={btnClass}
         >
-          <span className={selected ? 'text-neutral-900' : 'text-neutral-400'}>
+          <span className={selected || (value && value !== 0) ? 'text-neutral-900' : 'text-neutral-400'}>
             {selected ? (
               <span className="flex items-center gap-2">
                 {selected.label}
                 {selected.sub && <span className="text-xs text-neutral-400 font-normal">{selected.sub}</span>}
               </span>
-            ) : placeholder}
+            ) : (value && value !== 0 && value !== '0' ? String(value) : placeholder)}
           </span>
           <ChevronDown className={`w-4 h-4 text-neutral-400 transition-transform duration-200 shrink-0 ${open ? 'rotate-180' : ''}`} />
         </button>
 
         {open && (
-          <div className="absolute top-full mt-1 left-0 right-0 z-50 bg-white border border-neutral-200 rounded-xl shadow-lg overflow-hidden animate-[fadeIn_150ms_ease]">
+          <div className="absolute top-full mt-1 left-0 z-50 bg-white border border-neutral-200 rounded-xl shadow-lg overflow-hidden animate-[fadeIn_150ms_ease] min-w-[220px]">
             <div className="max-h-56 overflow-y-auto py-1">
               {options.length === 0 && (
                 <div className="px-3 py-4 text-sm text-neutral-400 text-center">No options</div>

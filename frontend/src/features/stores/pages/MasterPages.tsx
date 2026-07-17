@@ -82,8 +82,8 @@ export function UnitsPage() {
       { key: 'short_name', header: 'Short', render: (u) => u.short_name },
       { key: 'decimal_places', header: 'Decimals', hideOnMobile: true, render: (u) => u.decimal_places.toString() },
     ]}
-    createFn={(d) => unitsApi.create({ ...d, allow_fraction: (parseInt(d.decimal_places || '0') > 0) })}
-    updateFn={(id, d) => unitsApi.update(id, { ...d, allow_fraction: (parseInt(d.decimal_places || '0') > 0) })}
+    createFn={(d) => unitsApi.create({ ...d, decimal_places: Number(d.decimal_places) || 0, allow_fraction: (parseInt(d.decimal_places || '0') > 0) })}
+    updateFn={(id, d) => unitsApi.update(id, { ...d, decimal_places: Number(d.decimal_places) || 0, allow_fraction: (parseInt(d.decimal_places || '0') > 0) })}
     deleteFn={(id) => unitsApi.remove(id)}
     formFields={unitFields}
     searchPlaceholder="Search units..."

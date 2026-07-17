@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Loader2, Save, CreditCard, ShoppingCart, Plus, Minus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Select } from '@/components/ui/Select';
+import { DatePicker } from '@/components/ui/DatePicker';
 import { paymentsApi, suppliersApi, purchasesApi } from '@/services/api-endpoints';
 import { useAuth } from '@/features/auth/auth-context';
 import { formatCurrency, formatDate } from '@/utils/format';
@@ -37,7 +38,8 @@ export function SupplierPaymentNewPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const { activeStoreId } = useAuth();
+  const { activeStoreId, stores } = useAuth();
+  const resolvedStoreId = activeStoreId !== 'all' ? Number(activeStoreId) : (stores[0]?.id || 1);
   const [allocations, setAllocations] = useState<PurchaseAllocation[]>([]);
   const [allocationMode, setAllocationMode] = useState(false);
 
@@ -127,7 +129,7 @@ export function SupplierPaymentNewPage() {
 
   const onSubmit = (data: FormData) => {
     const payload: any = {
-      store_id: activeStoreId,
+      store_id: resolvedStoreId,
       supplier_id: data.supplier_id,
       payment_date: data.payment_date,
       payment_mode_id: data.payment_mode_id,
@@ -153,7 +155,7 @@ export function SupplierPaymentNewPage() {
   const navToPurchase = (id: number) => navigate('/purchases/' + id);
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
         <button onClick={navToPayment} className="p-2 hover:bg-neutral-100 rounded-xl transition-colors">
@@ -187,7 +189,7 @@ export function SupplierPaymentNewPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label">Payment Date *</label>
-              <input type="date" className="input-field" {...register('payment_date')} />
+              <DatePicker label="Payment Date *" value={watch('payment_date')} onChange={(val) => setValue('payment_date', val)} />
             </div>
             <Select
               label="Payment Mode *"

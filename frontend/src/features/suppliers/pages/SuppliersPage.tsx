@@ -42,8 +42,12 @@ export function SuppliersPage() {
   const suppliers = Array.isArray(raw) ? raw : (raw?.data || []);
 
   const handleSave = async (formData: Record<string, any>) => {
-    if (editingItem?.id) { await suppliersApi.update(editingItem.id, formData); toast.success('Supplier updated'); }
-    else { await suppliersApi.create(formData); toast.success('Supplier created'); }
+    const payload = {
+      ...formData,
+      opening_balance: Number(formData.opening_balance) || 0,
+    };
+    if (editingItem?.id) { await suppliersApi.update(editingItem.id, payload); toast.success('Supplier updated'); }
+    else { await suppliersApi.create(payload); toast.success('Supplier created'); }
     queryClient.invalidateQueries({ queryKey: ['suppliers'] });
   };
 

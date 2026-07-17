@@ -64,7 +64,14 @@ export function ProductsPage() {
   });
 
   const handleSave = async (formData: Record<string, any>) => {
-    const payload = { ...formData };
+    const payload = {
+      ...formData,
+      category_id: Number(formData.category_id) || null,
+      unit_id: Number(formData.unit_id) || 0,
+      brand_id: Number(formData.brand_id) || null,
+      gst_rate_id: Number(formData.gst_rate_id) || 0,
+      minimum_stock: Number(formData.minimum_stock) || 0,
+    };
     if (editingProduct && editingProduct.id) {
       await productsApi.update(editingProduct.id, payload);
       toast.success('Product updated');

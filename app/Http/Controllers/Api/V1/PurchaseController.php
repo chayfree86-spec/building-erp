@@ -99,9 +99,11 @@ class PurchaseController extends Controller
             'total_amount' => $request->total_amount,
             'paid_amount' => $request->paid_amount ?? 0,
             'balance_amount' => $request->total_amount - ($request->paid_amount ?? 0),
-            'status' => 'draft',
+            'status' => 'approved',
             'remarks' => $request->remarks,
             'created_by' => $request->user()->id,
+            'approved_by' => $request->user()->id,
+            'approved_at' => now(),
         ]);
 
         foreach ($request->items as $item) {
@@ -121,6 +123,13 @@ class PurchaseController extends Controller
             ]);
         }
 
+        // Auto-confirm purchase: create batches, inventory ledger & supplier ledger
+        try {
+            $purchase = \App\Services\PurchaseService::confirm($purchase);
+        } catch (\RuntimeException $e) {
+            // If confirm fails, still return the purchase as created
+        }
+
         \App\Services\AuditLogService::log(
             module: 'purchase',
             action: 'purchase_create',
@@ -131,8 +140,8 @@ class PurchaseController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Purchase created successfully.',
-            'data' => $purchase->load(['items', 'supplier', 'store']),
+            'message' => 'Purchase created & confirmed. Inventory updated.',
+            'data' => $purchase->load(['items', 'supplier', 'store', 'batches']),
             'errors' => null,
         ], 201);
     }

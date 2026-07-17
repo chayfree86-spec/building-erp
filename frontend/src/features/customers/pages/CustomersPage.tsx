@@ -43,11 +43,16 @@ export function CustomersPage() {
   const customers = Array.isArray(raw) ? raw : (raw?.data || []);
 
   const handleSave = async (formData: Record<string, any>) => {
+    const payload = {
+      ...formData,
+      opening_balance: Number(formData.opening_balance) || 0,
+      credit_limit: Number(formData.credit_limit) || 0,
+    };
     if (editingItem && editingItem.id) {
-      await customersApi.update(editingItem.id, formData);
+      await customersApi.update(editingItem.id, payload);
       toast.success('Customer updated');
     } else {
-      await customersApi.create(formData);
+      await customersApi.create(payload);
       toast.success('Customer created');
     }
     queryClient.invalidateQueries({ queryKey: ['customers'] });

@@ -19,8 +19,9 @@ export function StatusBadge({ status }: { status: string }) {
     received: 'badge-confirmed',
   };
 
-  const cls = map[status] || 'badge-draft';
-  const label = status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  const s = String(status ?? '');
+  const cls = map[s] || 'badge-draft';
+  const label = s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
   return <span className={cls}>{label}</span>;
 }

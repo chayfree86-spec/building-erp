@@ -1,0 +1,8 @@
+{
+  "name": "Build ERP",
+  "short_name": "BuildERP",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#2563EB",
+  "background_color": "#f9fafb"
+}

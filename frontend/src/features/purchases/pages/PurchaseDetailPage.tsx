@@ -55,10 +55,10 @@ export function PurchaseDetailPage() {
   };
   const totals = editMode ? calcTot() : {subtotal:Number(purchase.subtotal),discount:Number(purchase.discount_amount||0),tax:Number(purchase.tax_amount||0),total:Number(purchase.total_amount)};
   const handleSave = () => updateMutation.mutate({subtotal:totals.subtotal,discount_amount:totals.discount,tax_amount:totals.tax,total_amount:totals.total,
-    items:editedItems.map((item:any)=>({id:item.id,product_id:item.product_id,quantity:item.quantity,purchase_price:item.purchase_price,selling_price:item.selling_price||0,discount_amount:item.discount_amount||0,gst_rate:item.gst_rate||0,taxable_amount:item.taxable_amount||0,tax_amount:item.tax_amount||0,line_total:item.line_total||0}))});
+    items:editedItems.map((item:any)=>({id:item.id,product_id:item.product_id,quantity:Number(item.quantity)||0,purchase_price:Number(item.purchase_price)||0,selling_price:Number(item.selling_price)||0,discount_amount:Number(item.discount_amount)||0,gst_rate:Number(item.gst_rate)||0,taxable_amount:Number(item.taxable_amount)||0,tax_amount:Number(item.tax_amount)||0,line_total:Number(item.line_total)||0}))});
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
         <button onClick={() => navigate('/purchases')} className="p-2 hover:bg-neutral-100 rounded-lg">
@@ -119,43 +119,43 @@ export function PurchaseDetailPage() {
       {/* Items Table */}
       <div className="card p-6">
         <h2 className="text-lg font-semibold text-neutral-900 mb-4">Items ({items.length})</h2>
-        <div className="overflow-x-auto">
+        <div className="overflow-visible">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left text-neutral-500">
-                <th className="pb-2 font-medium">#</th>
-                <th className="pb-2 font-medium">Product</th>
-                <th className="pb-2 font-medium text-right">Qty</th>
-                <th className="pb-2 font-medium text-right">Purch. Price</th>
-                <th className="pb-2 font-medium text-right">Sell Price</th>
-                <th className="pb-2 font-medium text-right">Disc.</th>
-                <th className="pb-2 font-medium text-right">GST%</th>
-                <th className="pb-2 font-medium text-right">Tax</th>
-                <th className="pb-2 font-medium text-right">Total</th>
+                <th className="pb-2 font-medium px-2">#</th>
+                <th className="pb-2 font-medium px-2">Product</th>
+                <th className="pb-2 font-medium text-right px-2">Qty</th>
+                <th className="pb-2 font-medium text-right px-2">Purch. Price</th>
+                <th className="pb-2 font-medium text-right px-2">Sell Price</th>
+                <th className="pb-2 font-medium text-right px-2">Disc.</th>
+                <th className="pb-2 font-medium text-right px-2">GST%</th>
+                <th className="pb-2 font-medium text-right px-2">Tax</th>
+                <th className="pb-2 font-medium text-right px-2">Total</th>
               </tr>
             </thead>
             <tbody>
               {items.map((item: any, idx: number) => (
                 <tr key={item.id || idx} className="border-b border-neutral-100">
-                  <td className="py-2 text-neutral-400">{idx + 1}</td>
-                  <td className="py-2 font-medium">{item.product?.name || `Product #${item.product_id}`}</td>
-                  <td className="py-2 text-right">
-                    {editMode ? <input type="number" className="input-field w-20 text-right text-sm py-1" min="0.001" step="0.001" value={item.quantity} onChange={(e) => updateItem(idx, 'quantity', Number(e.target.value))} />
+                  <td className="py-3 px-2 text-neutral-400 align-middle">{idx + 1}</td>
+                  <td className="py-3 px-2 font-medium align-middle">{item.product?.name || `Product #${item.product_id}`}</td>
+                  <td className="py-3 px-2 text-right align-middle">
+                    {editMode ? <input type="number" className="input-field w-20 text-right text-sm" min="0.001" step="0.001" value={item.quantity} onChange={(e) => updateItem(idx, 'quantity', Number(e.target.value))} />
                     : Number(item.quantity).toFixed(3)}</td>
-                  <td className="py-2 text-right font-mono">
-                    {editMode ? <input type="number" className="input-field w-24 text-right text-sm py-1" min="0" step="0.01" value={item.purchase_price} onChange={(e) => updateItem(idx, 'purchase_price', Number(e.target.value))} />
+                  <td className="py-3 px-2 text-right font-mono align-middle">
+                    {editMode ? <input type="number" className="input-field w-24 text-right text-sm" min="0" step="0.01" value={item.purchase_price} onChange={(e) => updateItem(idx, 'purchase_price', Number(e.target.value))} />
                     : formatCurrency(Number(item.purchase_price))}</td>
-                  <td className="py-2 text-right font-mono">
-                    {editMode ? <input type="number" className="input-field w-24 text-right text-sm py-1" min="0" step="0.01" value={item.selling_price || 0} onChange={(e) => updateItem(idx, 'selling_price', Number(e.target.value))} />
+                  <td className="py-3 px-2 text-right font-mono align-middle">
+                    {editMode ? <input type="number" className="input-field w-24 text-right text-sm" min="0" step="0.01" value={item.selling_price || 0} onChange={(e) => updateItem(idx, 'selling_price', Number(e.target.value))} />
                     : <span className="text-primary-600 font-medium">{formatCurrency(Number(item.selling_price || 0))}</span>}</td>
-                  <td className="py-2 text-right font-mono text-red-600">
-                    {editMode ? <input type="number" className="input-field w-20 text-right text-sm py-1" min="0" step="0.01" value={item.discount_amount || 0} onChange={(e) => updateItem(idx, 'discount_amount', Number(e.target.value))} />
+                  <td className="py-3 px-2 text-right font-mono text-red-600 align-middle">
+                    {editMode ? <input type="number" className="input-field w-20 text-right text-sm" min="0" step="0.01" value={item.discount_amount || 0} onChange={(e) => updateItem(idx, 'discount_amount', Number(e.target.value))} />
                     : formatCurrency(Number(item.discount_amount || 0))}</td>
-                  <td className="py-2 text-right">
-                    {editMode ? <input type="number" className="input-field w-16 text-right text-sm py-1" min="0" step="0.01" value={item.gst_rate || 0} onChange={(e) => updateItem(idx, 'gst_rate', Number(e.target.value))} />
+                  <td className="py-3 px-2 text-right align-middle">
+                    {editMode ? <input type="number" className="input-field w-16 text-right text-sm" min="0" step="0.01" value={item.gst_rate || 0} onChange={(e) => updateItem(idx, 'gst_rate', Number(e.target.value))} />
                     : `${Number(item.gst_rate || 0)}%`}</td>
-                  <td className="py-2 text-right font-mono">{formatCurrency(Number(item.tax_amount || 0))}</td>
-                  <td className="py-2 text-right font-semibold font-mono">{formatCurrency(Number(item.line_total))}</td>
+                  <td className="py-3 px-2 text-right font-mono align-middle">{formatCurrency(Number(item.tax_amount || 0))}</td>
+                  <td className="py-3 px-2 text-right font-semibold font-mono align-middle">{formatCurrency(Number(item.line_total))}</td>
                 </tr>
               ))}
             </tbody>

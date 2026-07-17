@@ -20,6 +20,12 @@ class DatabaseSeeder extends Seeder
             PaymentModeSeeder::class,
             RoleAndPermissionSeeder::class,
             SuperAdminSeeder::class,
+            StoreSeeder::class,
+            CategorySeeder::class,
+            BrandSeeder::class,
+            ProductSeeder::class,
+            CustomerSeeder::class,
+            SupplierSeeder::class,
             SettingSeeder::class,
             NumberSeriesSeeder::class,
         ]);

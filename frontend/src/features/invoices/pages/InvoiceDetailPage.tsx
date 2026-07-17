@@ -26,7 +26,7 @@ export function InvoiceDetailPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6">
       <div className="flex items-center gap-4">
         <button onClick={() => navigate('/invoices')} className="p-2 hover:bg-neutral-100 rounded-lg"><ArrowLeft className="w-5 h-5" /></button>
         <div className="flex-1">
@@ -61,26 +61,26 @@ export function InvoiceDetailPage() {
 
       <div className="card p-6">
         <h2 className="text-lg font-semibold text-neutral-900 mb-4">Items ({items.length})</h2>
-        <div className="overflow-x-auto">
+        <div className="overflow-visible">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left text-neutral-500">
-                <th className="pb-2">#</th><th className="pb-2">Product</th><th className="pb-2 text-right">Qty</th>
-                <th className="pb-2 text-right">Rate</th><th className="pb-2 text-right">Disc.</th>
-                <th className="pb-2 text-right">GST%</th><th className="pb-2 text-right">Tax</th><th className="pb-2 text-right">Total</th>
+                <th className="pb-2 px-2">#</th><th className="pb-2 px-2">Product</th><th className="pb-2 text-right px-2">Qty</th>
+                <th className="pb-2 text-right px-2">Rate</th><th className="pb-2 text-right px-2">Disc.</th>
+                <th className="pb-2 text-right px-2">GST%</th><th className="pb-2 text-right px-2">Tax</th><th className="pb-2 text-right px-2">Total</th>
               </tr>
             </thead>
             <tbody>
               {items.map((item: any, idx: number) => (
                 <tr key={item.id || idx} className="border-b border-neutral-100">
-                  <td className="py-2 text-neutral-400">{idx + 1}</td>
-                  <td className="py-2 font-medium">{item.product?.name || `Product #${item.product_id}`}</td>
-                  <td className="py-2 text-right">{Number(item.quantity).toFixed(3)}</td>
-                  <td className="py-2 text-right font-mono">{formatCurrency(Number(item.rate))}</td>
-                  <td className="py-2 text-right font-mono text-red-600">{formatCurrency(Number(item.discount_amount || 0))}</td>
-                  <td className="py-2 text-right">{Number(item.gst_rate || 0)}%</td>
-                  <td className="py-2 text-right font-mono">{formatCurrency(Number(item.tax_amount || 0))}</td>
-                  <td className="py-2 text-right font-semibold font-mono">{formatCurrency(Number(item.line_total))}</td>
+                  <td className="py-3 px-2 text-neutral-400 align-middle">{idx + 1}</td>
+                  <td className="py-3 px-2 font-medium align-middle">{item.product?.name || `Product #${item.product_id}`}</td>
+                  <td className="py-3 px-2 text-right align-middle">{Number(item.quantity).toFixed(3)}</td>
+                  <td className="py-3 px-2 text-right font-mono align-middle">{formatCurrency(Number(item.rate))}</td>
+                  <td className="py-3 px-2 text-right font-mono text-red-600 align-middle">{formatCurrency(Number(item.discount_amount || 0))}</td>
+                  <td className="py-3 px-2 text-right align-middle">{Number(item.gst_rate || 0)}%</td>
+                  <td className="py-3 px-2 text-right font-mono align-middle">{formatCurrency(Number(item.tax_amount || 0))}</td>
+                  <td className="py-3 px-2 text-right font-semibold font-mono align-middle">{formatCurrency(Number(item.line_total))}</td>
                 </tr>
               ))}
             </tbody>

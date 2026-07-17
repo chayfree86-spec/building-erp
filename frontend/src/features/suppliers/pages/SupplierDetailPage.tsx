@@ -160,7 +160,7 @@ export function SupplierDetailPage() {
           );
 
           return (
-            <div className="overflow-x-auto">
+            <div className="overflow-visible">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left text-neutral-500">

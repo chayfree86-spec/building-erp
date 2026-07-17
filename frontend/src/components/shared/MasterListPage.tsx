@@ -63,7 +63,7 @@ export function MasterListPage<T extends { id: number; status?: string; name?: s
   const cols = [...columns];
   if (statusField !== false) {
     cols.push({
-      key: 'status', header: 'Status',
+      key: 'status', header: 'Status', className: 'w-28',
       render: (item: T) => <StatusBadge status={(item as any)[statusField || 'status'] || item.status || 'active'} />,
     });
   }
@@ -72,7 +72,7 @@ export function MasterListPage<T extends { id: number; status?: string; name?: s
   const hasCrud = !!(createFn || updateFn || deleteFn);
   if (hasCrud) {
     cols.push({
-      key: 'actions', header: '', hideOnMobile: true,
+      key: 'actions', header: '', hideOnMobile: true, className: 'w-20',
       render: (item: T) => (
         <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
           {updateFn && formFields && (

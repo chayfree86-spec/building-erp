@@ -40,6 +40,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         stores: storesRes.data,
         isAuthenticated: true,
         isLoading: false,
+        // Auto-select first store if none selected
+        activeStoreId: s.activeStoreId === 'all' && storesRes.data?.length
+          ? String(storesRes.data[0].id) : s.activeStoreId,
       }));
     } catch {
       localStorage.removeItem('auth_token');
@@ -60,7 +63,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('auth_user', JSON.stringify(user));
     setState(s => ({ ...s, user, token, isAuthenticated: true }));
     const { data: storesRes } = await authApi.myStores();
-    setState(s => ({ ...s, stores: storesRes.data }));
+    const userStores = storesRes.data || [];
+    setState(s => ({
+      ...s,
+      stores: userStores,
+      activeStoreId: userStores.length ? String(userStores[0].id) : s.activeStoreId,
+    }));
+    if (userStores.length) {
+      localStorage.setItem('active_store_id', String(userStores[0].id));
+    }
   };
 
   const logout = async () => {
