@@ -7,11 +7,12 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { CardSkeleton } from '@/components/ui/Skeleton';
 import { Button } from '@/components/ui/Button';
+import { Select } from '@/components/ui/Select';
 import { MasterFormModal, type FieldDef } from '@/components/shared/MasterFormModal';
 import { useSuppliers } from '@/features/customers/api/queries';
 import { suppliersApi } from '@/services/api-endpoints';
 import { formatCurrency } from '@/utils/format';
-import { Search, RotateCcw, Truck, Pencil, Trash2, Plus } from 'lucide-react';
+import { Search, RotateCcw, Truck, Pencil, Trash2, Plus, CreditCard } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { Supplier } from '@/types';
 
@@ -57,8 +58,8 @@ export function SuppliersPage() {
       <PageHeader title="Suppliers" description="Manage your material suppliers" action={{ label: 'Add Supplier', icon: Plus, onClick: () => { setEditingItem(null); setModalOpen(true); } }} />
       <div className="card p-4">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, mobile..." className="input-field pl-10" /></div>
-          <select value={status} onChange={e => setStatus(e.target.value)} className="input-field"><option value="">All Status</option><option value="active">Active</option><option value="inactive">Inactive</option></select>
+          <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, mobile..." className="input-field has-icon" /></div>
+          <Select options={[{value:'',label:'All Status'},{value:'active',label:'Active'},{value:'inactive',label:'Inactive'}]} value={status} onChange={setStatus} />
           <Button variant="ghost" icon={RotateCcw} onClick={() => { setSearch(''); setStatus(''); }}>Reset</Button>
         </div>
       </div>
@@ -74,6 +75,7 @@ export function SuppliersPage() {
             { key: 'status', header: 'Status', render: (s: Supplier) => <StatusBadge status={s.status} /> },
             { key: 'actions', header: '', hideOnMobile: true, render: (s: Supplier) => (
               <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                <Button size="sm" variant="ghost" onClick={() => navigate(`/supplier-payments/new?supplier=${s.id}`)} title="Pay"><CreditCard className="w-4 h-4 text-emerald-500 hover:text-emerald-700" /></Button>
                 <Button size="sm" variant="ghost" onClick={() => { setEditingItem(s); setModalOpen(true); }} title="Edit"><Pencil className="w-4 h-4 text-neutral-400 hover:text-primary-600" /></Button>
                 <Button size="sm" variant="ghost" onClick={() => handleDelete(s.id)} title="Delete"><Trash2 className="w-4 h-4 text-neutral-400 hover:text-red-500" /></Button>
               </div>

@@ -101,7 +101,7 @@ export function ProductsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, SKU, barcode..." className="input-field pl-10" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, SKU, barcode..." className="input-field has-icon" />
           </div>
           <SearchableSelect placeholder="All Categories" options={catOptions} value={categoryId} onChange={setCategoryId} />
           <SearchableSelect placeholder="All Brands" options={brandOptions} value={brandId} onChange={setBrandId} />

@@ -138,8 +138,12 @@ input[type='number'] { -moz-appearance: textfield; }
 /* Input */
 .input-field {
   width: 100%; border-radius: 0.75rem; border: 1px solid #E2E8F0;
-  background: white; padding: 0.625rem 1rem; font-size: 0.875rem;
-  color: #0F172A; transition: border-color 150ms, box-shadow 150ms;
+  background: white; padding-top: 0.625rem; padding-bottom: 0.625rem;
+  padding-left: 1rem; padding-right: 1rem;
+  font-size: 0.875rem; color: #0F172A; transition: border-color 150ms, box-shadow 150ms;
+}
+.input-field.has-icon {
+  padding-left: 2.5rem;
 }
 .input-field::placeholder { color: #94A3B8; }
 .input-field:focus { outline: none; border-color: #2563EB; box-shadow: 0 0 0 2px rgba(37,99,235,0.2); }

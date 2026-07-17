@@ -31,7 +31,7 @@ export function StockPage() {
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search product, batch..." className="input-field pl-10" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search product, batch..." className="input-field has-icon" />
           </div>
           <Button variant="ghost" icon={RotateCcw} onClick={() => setSearch('')}>Reset</Button>
         </div>
@@ -53,17 +53,23 @@ export function StockPage() {
             )},
             { key: 'batch', header: 'Batch', hideOnMobile: true, render: (item: any) => (
               <div>
-                <p className="text-sm">{item.batch_no || '-'}</p>
-                {item.expiry_date && <p className="text-xs text-neutral-500">Exp: {item.expiry_date}</p>}
+                <p className="text-sm font-mono">{item.batch_number || '-'}</p>
               </div>
             )},
             { key: 'qty', header: 'Quantity', render: (item: any) => (
-              <span className="font-semibold">{parseFloat(item.quantity || 0).toFixed(2)}</span>
+              <span className="font-semibold">{parseFloat(item.available_quantity || 0).toFixed(2)}</span>
             )},
             { key: 'unit', header: 'Unit', hideOnMobile: true, render: (item: any) => item.product?.unit?.short_name || '-' },
-            { key: 'value', header: 'Value', render: (item: any) => (
-              <span className="font-semibold">₹{parseFloat(item.total_value || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+            { key: 'purchase_price', header: 'Purch. Price', hideOnMobile: true, render: (item: any) => (
+              <span className="font-mono text-sm">₹{parseFloat(item.purchase_price || 0).toFixed(2)}</span>
             )},
+            { key: 'selling_price', header: 'Sell Price', hideOnMobile: true, render: (item: any) => (
+              <span className="font-mono text-sm">₹{parseFloat(item.selling_price || 0).toFixed(2)}</span>
+            )},
+            { key: 'value', header: 'Value', render: (item: any) => {
+              const value = (parseFloat(item.available_quantity) || 0) * (parseFloat(item.landed_cost) || parseFloat(item.purchase_price) || 0);
+              return <span className="font-semibold">₹{value.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>;
+            }},
           ]}
         />
       )}

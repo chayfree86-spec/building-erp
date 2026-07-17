@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
+import { Select } from '@/components/ui/Select';
 import { X, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -96,10 +97,12 @@ export function MasterFormModal({ open, onClose, title, fields, initialData, onS
                   <span className="text-sm text-neutral-700">{formData[f.key] === 'active' || formData[f.key] === 'true' || formData[f.key] === '1' ? 'Active' : 'Inactive'}</span>
                 </label>
               ) : f.type === 'select' ? (
-                <select value={formData[f.key] || ''} onChange={e => handleChange(f.key, e.target.value)} className="input-field">
-                  <option value="">Select...</option>
-                  {f.options?.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </select>
+                <Select
+                  options={f.options?.map(o => ({ value: o.value, label: o.label })) || []}
+                  value={formData[f.key] || ''}
+                  onChange={(val) => handleChange(f.key, String(val))}
+                  placeholder="Select..."
+                />
               ) : f.type === 'textarea' ? (
                 <textarea value={formData[f.key] || ''} onChange={e => handleChange(f.key, e.target.value)} className="input-field min-h-[80px]" placeholder={f.placeholder} />
               ) : (

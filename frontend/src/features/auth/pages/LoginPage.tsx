@@ -136,7 +136,7 @@ export function LoginPage() {
                         onChange={e => setForgotEmail(e.target.value)}
                         type="text"
                         placeholder="admin@buildingerp.com"
-                        className="input-field pl-10"
+                        className="input-field has-icon"
                         autoFocus
                       />
                     </div>

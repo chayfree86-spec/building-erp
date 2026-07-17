@@ -9,7 +9,7 @@ import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { Button } from '@/components/ui/Button';
 import { usePurchases } from '../api/queries';
 import { formatCurrency, formatDate } from '@/utils/format';
-import { Search, RotateCcw, ShoppingCart, Plus, Eye, Check, X, Truck } from 'lucide-react';
+import { Search, RotateCcw, ShoppingCart, Plus, Eye, Check, X, Truck, Edit2, Send } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { purchasesApi } from '@/services/api-endpoints';
 import { useQueryClient } from '@tanstack/react-query';
@@ -56,7 +56,7 @@ export function PurchasesPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search invoice #, supplier..." className="input-field pl-10" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search invoice #, supplier..." className="input-field has-icon" />
           </div>
           <SearchableSelect placeholder="All Status" options={statusOptions} value={status} onChange={setStatus} />
           <Button variant="ghost" icon={RotateCcw} onClick={() => { setSearch(''); setStatus(''); }}>Reset</Button>
@@ -72,10 +72,10 @@ export function PurchasesPage() {
           keyExtractor={(p: any) => p.id}
           onRowClick={(p: any) => navigate(`/purchases/${p.id}`)}
           columns={[
-            { key: 'invoice_no', header: 'Invoice #', render: (p: any) => (
+            { key: 'purchase_no', header: 'Purchase #', render: (p: any) => (
               <div>
-                <p className="font-medium text-neutral-900">{p.invoice_no}</p>
-                <p className="text-xs text-neutral-500">{formatDate(p.invoice_date)}</p>
+                <p className="font-medium text-neutral-900">{p.purchase_number || `#${p.id}`}</p>
+                <p className="text-xs text-neutral-500">{formatDate(p.purchase_date)}</p>
               </div>
             )},
             { key: 'supplier', header: 'Supplier', hideOnMobile: true, render: (p: any) => (
@@ -84,7 +84,24 @@ export function PurchasesPage() {
                 {p.supplier?.gst_number && <p className="text-xs text-neutral-500">GST: {p.supplier.gst_number}</p>}
               </div>
             )},
-            { key: 'total', header: 'Amount', render: (p: any) => (
+            { key: 'items', header: 'Items', hideOnMobile: true, render: (p: any) => (
+              <span className="text-sm text-neutral-600">{p.items?.length || 0} items</span>
+            )},
+            { key: 'purch_price', header: 'Purch. Price', hideOnMobile: true, render: (p: any) => (
+              <div className="text-sm font-mono">
+                {p.items?.map((i: any, idx: number) => (
+                  <span key={idx} className="text-neutral-700">{idx > 0 && ', '}{formatCurrency(i.purchase_price)}</span>
+                )) || '-'}
+              </div>
+            )},
+            { key: 'sell_price', header: 'Sell Price', hideOnMobile: true, render: (p: any) => (
+              <div className="text-sm font-mono">
+                {p.items?.map((i: any, idx: number) => (
+                  <span key={idx} className="text-primary-600 font-medium">{idx > 0 && ', '}{formatCurrency(i.selling_price || 0)}</span>
+                )) || '-'}
+              </div>
+            )},
+            { key: 'total', header: 'Total Amt', render: (p: any) => (
               <div className="text-right">
                 <p className="font-semibold text-neutral-900">{formatCurrency(p.total_amount)}</p>
                 {p.paid_amount > 0 && <p className="text-xs text-emerald-600">Paid: {formatCurrency(p.paid_amount)}</p>}
@@ -94,7 +111,10 @@ export function PurchasesPage() {
             { key: 'actions', header: '', hideOnMobile: true, render: (p: any) => (
               <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
                 {(p.status === 'draft') && (
-                  <Button size="sm" variant="ghost" onClick={() => handleAction(p.id, 'submit')} title="Submit"><Check className="w-4 h-4" /></Button>
+                  <>
+                    <Button size="sm" variant="ghost" onClick={() => navigate(`/purchases/${p.id}`)} title="Edit"><Edit2 className="w-4 h-4 text-blue-500" /></Button>
+                    <Button size="sm" variant="ghost" onClick={() => handleAction(p.id, 'submit')} title="Submit"><Send className="w-4 h-4" /></Button>
+                  </>
                 )}
                 {(p.status === 'submitted') && (
                   <Button size="sm" variant="ghost" onClick={() => handleAction(p.id, 'approve')} title="Approve"><Check className="w-4 h-4 text-emerald-600" /></Button>

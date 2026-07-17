@@ -12,7 +12,7 @@ import { MasterFormModal, type FieldDef } from '@/components/shared/MasterFormMo
 import { useCustomers } from '../api/queries';
 import { customersApi } from '@/services/api-endpoints';
 import { formatCurrency } from '@/utils/format';
-import { Search, RotateCcw, Users, Pencil, Trash2, Plus } from 'lucide-react';
+import { Search, RotateCcw, Users, Pencil, Trash2, Plus, CreditCard } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { Customer } from '@/types';
 
@@ -75,7 +75,7 @@ export function CustomersPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, mobile..." className="input-field pl-10" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, mobile..." className="input-field has-icon" />
           </div>
           <SearchableSelect placeholder="All Status" options={[{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }]} value={status} onChange={setStatus} />
           <Button variant="ghost" icon={RotateCcw} onClick={() => { setSearch(''); setStatus(''); }}>Reset</Button>
@@ -101,6 +101,7 @@ export function CustomersPage() {
             { key: 'status', header: 'Status', render: (c: Customer) => <StatusBadge status={c.status} /> },
             { key: 'actions', header: '', hideOnMobile: true, render: (c: Customer) => (
               <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                <Button size="sm" variant="ghost" onClick={() => navigate(`/customer-payments/new?customer=${c.id}`)} title="Receive Payment"><CreditCard className="w-4 h-4 text-emerald-500 hover:text-emerald-700" /></Button>
                 <Button size="sm" variant="ghost" onClick={() => { setEditingItem(c); setModalOpen(true); }} title="Edit"><Pencil className="w-4 h-4 text-neutral-400 hover:text-primary-600" /></Button>
                 <Button size="sm" variant="ghost" onClick={() => handleDelete(c.id)} title="Delete"><Trash2 className="w-4 h-4 text-neutral-400 hover:text-red-500" /></Button>
               </div>

@@ -45,7 +45,7 @@ function LedgerPage({ type, title, description }: { type: 'customer' | 'supplier
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder={`Search ${type}...`} className="input-field pl-10" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder={`Search ${type}...`} className="input-field has-icon" />
           </div>
           <Button variant="ghost" icon={RotateCcw} onClick={() => { setSearch(''); setPartyId(''); }}>Reset</Button>
         </div>

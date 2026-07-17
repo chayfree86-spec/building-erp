@@ -15,8 +15,8 @@ class PurchaseService
      */
     public static function confirm(Purchase $purchase): Purchase
     {
-        if ($purchase->status !== 'draft' && $purchase->status !== 'submitted') {
-            throw new \RuntimeException('Only draft or submitted purchases can be confirmed.');
+        if (!in_array($purchase->status, ['draft', 'submitted', 'approved'])) {
+            throw new \RuntimeException('Only draft, submitted or approved purchases can be confirmed.');
         }
 
         return DB::transaction(function () use ($purchase) {

@@ -97,3 +97,11 @@ export function useTransfers(params?: Record<string, any>) {
     queryFn: async () => { const { data } = await transfersApi.list(params); return { items: extractItems(data), pagination: extractPagination(data) }; },
   });
 }
+
+// ─── Supplier Payments ───
+export function useSupplierPayments(params?: Record<string, any>) {
+  return useQuery({
+    queryKey: ['supplier-payments', params],
+    queryFn: async () => { const { data } = await paymentsApi.supplierList(params); return { items: extractItems(data), pagination: extractPagination(data) }; },
+  });
+}

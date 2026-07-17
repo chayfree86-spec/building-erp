@@ -21,7 +21,10 @@ const navItems: NavItem[] = [
   { label: 'Inventory', icon: Package, path: '/stock' },
   { label: 'Customers', icon: Users, path: '/customers' },
   { label: 'Suppliers', icon: Truck, path: '/suppliers' },
-  { label: 'Payments', icon: CreditCard, path: '/customer-payments' },
+  { label: 'Payments', icon: CreditCard, path: '/customer-payments', children: [
+    { label: 'Customer Payments', path: '/customer-payments' },
+    { label: 'Supplier Payments', path: '/supplier-payments' },
+  ]},
   { label: 'Returns', icon: RotateCcw, path: '/purchase-returns' },
   { label: 'Transfers', icon: ArrowRightLeft, path: '/stock-transfers' },
   { label: 'Reports', icon: BarChart3, path: '/reports' },

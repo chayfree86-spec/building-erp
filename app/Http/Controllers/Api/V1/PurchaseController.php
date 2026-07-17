@@ -153,10 +153,10 @@ class PurchaseController extends Controller
     {
         $purchase = Purchase::findOrFail($id);
 
-        if ($purchase->status !== 'draft') {
+        if (!in_array($purchase->status, ['draft', 'submitted'])) {
             return response()->json([
                 'success' => false,
-                'message' => 'Only draft purchases can be edited.',
+                'message' => 'Only draft or submitted purchases can be edited.',
                 'data' => null,
                 'errors' => null,
             ], 422);
@@ -354,6 +354,23 @@ class PurchaseController extends Controller
 
         return response()->json([
             'success' => true, 'message' => 'Purchase submitted.',
+            'data' => $purchase, 'errors' => null,
+        ]);
+    }
+
+    public function approve(int $id): JsonResponse
+    {
+        $purchase = Purchase::findOrFail($id);
+        if ($purchase->status !== 'submitted') {
+            return response()->json([
+                'success' => false, 'message' => 'Only submitted purchases can be approved.',
+                'data' => null, 'errors' => null,
+            ], 422);
+        }
+        $purchase->update(['status' => 'approved', 'approved_by' => request()->user()->id, 'approved_at' => now()]);
+
+        return response()->json([
+            'success' => true, 'message' => 'Purchase approved.',
             'data' => $purchase, 'errors' => null,
         ]);
     }

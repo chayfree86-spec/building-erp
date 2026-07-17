@@ -53,7 +53,7 @@ export function InvoicesPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search invoice #, customer..." className="input-field pl-10" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search invoice #, customer..." className="input-field has-icon" />
           </div>
           <SearchableSelect placeholder="All Status" options={statusOptions} value={status} onChange={setStatus} />
           <Button variant="ghost" icon={RotateCcw} onClick={() => { setSearch(''); setStatus(''); }}>Reset</Button>

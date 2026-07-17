@@ -41,27 +41,19 @@ const CustomerLedgerPage = lazy(() => import('@/features/ledgers/pages/LedgerPag
 const SupplierLedgerPage = lazy(() => import('@/features/ledgers/pages/LedgerPages').then(m => ({ default: m.SupplierLedgerPage })));
 const InventoryLedgerPage = lazy(() => import('@/features/ledgers/pages/LedgerPages').then(m => ({ default: m.InventoryLedgerPage })));
 
-// Simple placeholder for pages not yet fully built
-const Placeholder = ({ title }: { title: string }) => (
-  <div className="space-y-4">
-    <h1 className="text-2xl font-bold text-neutral-900">{title}</h1>
-    <div className="card p-8 text-center"><p className="text-neutral-500">This module is available via backend API. Full UI coming soon.</p></div>
-  </div>
-);
-const make = (t: string) => lazy(() => Promise.resolve({ default: () => <Placeholder title={t} /> }));
-
-const ProductDetailPage = make('Product Detail');
-const CustomerDetailPage = make('Customer Detail');
-const SupplierDetailPage = make('Supplier Detail');
-const PurchaseNewPage = make('New Purchase');
-const PurchaseDetailPage = make('Purchase Detail');
-const InvoiceNewPage = make('New Invoice');
-const InvoiceDetailPage = make('Invoice Detail');
-const SalesReturnsPage = make('Sales Returns');
-const SupplierPaymentsPage = make('Supplier Payments');
-const StockBatchPage = make('Stock Batches');
-const PermissionsPage = make('Permissions');
-const MorePage = make('More');
+const ProductDetailPage = lazy(() => import('@/features/products/pages/ProductDetailPage').then(m => ({ default: m.ProductDetailPage })));
+const CustomerDetailPage = lazy(() => import('@/features/customers/pages/CustomerDetailPage').then(m => ({ default: m.CustomerDetailPage })));
+const SupplierDetailPage = lazy(() => import('@/features/suppliers/pages/SupplierDetailPage').then(m => ({ default: m.SupplierDetailPage })));
+const PurchaseNewPage = lazy(() => import('@/features/purchases/pages/PurchaseNewPage').then(m => ({ default: m.PurchaseNewPage })));
+const PurchaseDetailPage = lazy(() => import('@/features/purchases/pages/PurchaseDetailPage').then(m => ({ default: m.PurchaseDetailPage })));
+const InvoiceNewPage = lazy(() => import('@/features/invoices/pages/InvoiceNewPage').then(m => ({ default: m.InvoiceNewPage })));
+const InvoiceDetailPage = lazy(() => import('@/features/invoices/pages/InvoiceDetailPage').then(m => ({ default: m.InvoiceDetailPage })));
+const SalesReturnsPage = lazy(() => import('@/features/returns/pages/SalesReturnsPage').then(m => ({ default: m.SalesReturnsPage })));
+const SupplierPaymentsPage = lazy(() => import('@/features/payments/pages/SupplierPaymentsPage').then(m => ({ default: m.SupplierPaymentsPage })));
+const SupplierPaymentNewPage = lazy(() => import('@/features/payments/pages/SupplierPaymentNewPage').then(m => ({ default: m.SupplierPaymentNewPage })));
+const StockBatchPage = lazy(() => import('@/features/stock/pages/StockBatchPage').then(m => ({ default: m.StockBatchPage })));
+const PermissionsPage = lazy(() => import('@/features/roles/pages/PermissionsPage').then(m => ({ default: m.PermissionsPage })));
+const MorePage = lazy(() => import('@/features/more/pages/MorePage').then(m => ({ default: m.MorePage })));
 
 const PageLoader = () => <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 text-primary-600 animate-spin" /></div>;
 
@@ -99,7 +91,9 @@ export default function App() {
                   <Route path="invoices/:id" element={<InvoiceDetailPage />} />
                   <Route path="sales-returns" element={<SalesReturnsPage />} />
                   <Route path="customer-payments" element={<CustomerPaymentsPage />} />
+                  <Route path="customer-payments/new" element={<CustomerPaymentsPage />} />
                   <Route path="supplier-payments" element={<SupplierPaymentsPage />} />
+                  <Route path="supplier-payments/new" element={<SupplierPaymentNewPage />} />
                   <Route path="stock" element={<StockPage />} />
                   <Route path="stock/batch" element={<StockBatchPage />} />
                   <Route path="stock-adjustments" element={<StockAdjustmentsPage />} />
