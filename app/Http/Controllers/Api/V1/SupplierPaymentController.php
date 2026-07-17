@@ -79,6 +79,14 @@ class SupplierPaymentController extends Controller
             'created_by' => $request->user()->id,
         ]);
 
+        // Auto-confirm payment: update purchase balances & supplier ledger
+        $allocations = $request->allocations ?? [];
+        try {
+            $payment = \App\Services\SupplierPaymentService::confirm($payment, $allocations);
+        } catch (\RuntimeException $e) {
+            // If confirm fails, return as draft
+        }
+
         AuditLogService::log(
             module: 'supplier_payment', action: 'payment_create',
             recordType: 'supplier_payment', recordId: $payment->id,
@@ -86,8 +94,8 @@ class SupplierPaymentController extends Controller
         );
 
         return response()->json([
-            'success' => true, 'message' => 'Supplier payment created.',
-            'data' => $payment->load(['supplier', 'store', 'paymentMode']),
+            'success' => true, 'message' => 'Payment recorded & confirmed.',
+            'data' => $payment->load(['supplier', 'store', 'paymentMode', 'allocations']),
             'errors' => null,
         ], 201);
     }

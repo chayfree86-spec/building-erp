@@ -4,17 +4,17 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Loader2, Save, CreditCard, ShoppingCart, Plus, Minus } from 'lucide-react';
+import { ArrowLeft, Loader2, Save, CreditCard, Receipt, Plus, Minus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Select } from '@/components/ui/Select';
 import { DatePicker } from '@/components/ui/DatePicker';
-import { paymentsApi, suppliersApi, purchasesApi } from '@/services/api-endpoints';
+import { paymentsApi, customersApi, salesApi } from '@/services/api-endpoints';
 import { useAuth } from '@/features/auth/auth-context';
 import { formatCurrency, formatDate } from '@/utils/format';
-import type { Supplier } from '@/types';
+import type { Customer } from '@/types';
 
 const formSchema = z.object({
-  supplier_id: z.number().min(1, 'Supplier is required'),
+  customer_id: z.number().min(1, 'Customer is required'),
   payment_date: z.string().min(1, 'Date is required'),
   payment_mode_id: z.number().min(1, 'Payment mode is required'),
   amount: z.number().min(0.01, 'Amount must be > 0'),
@@ -24,29 +24,29 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
-interface PurchaseAllocation {
-  purchase_id: number;
-  purchase_number: string;
-  purchase_date: string;
+interface InvoiceAllocation {
+  invoice_id: number;
+  invoice_number: string;
+  invoice_date: string;
   total_amount: number;
   paid_amount: number;
   balance: number;
   allocated: number;
 }
 
-export function SupplierPaymentNewPage() {
+export function CustomerPaymentNewPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { activeStoreId, stores } = useAuth();
   const resolvedStoreId = activeStoreId !== 'all' ? Number(activeStoreId) : (stores[0]?.id || 1);
-  const [allocations, setAllocations] = useState<PurchaseAllocation[]>([]);
+  const [allocations, setAllocations] = useState<InvoiceAllocation[]>([]);
   const [allocationMode, setAllocationMode] = useState(false);
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      supplier_id: Number(searchParams.get('supplier')) || 0,
+      customer_id: Number(searchParams.get('customer')) || 0,
       payment_date: new Date().toISOString().split('T')[0],
       payment_mode_id: 0,
       amount: 0,
@@ -55,64 +55,73 @@ export function SupplierPaymentNewPage() {
     },
   });
 
-  const supplierId = watch('supplier_id');
+  const customerId = watch('customer_id');
   const paymentAmount = watch('amount');
 
-  const { data: suppliersData } = useQuery({
-    queryKey: ['suppliers-list'],
-    queryFn: async () => { const { data } = await suppliersApi.list(); return data.data || []; },
+  const { data: customersData } = useQuery({
+    queryKey: ['customers-list'],
+    queryFn: async () => { const { data } = await customersApi.list(); return data.data || []; },
   });
   const { data: paymentModes } = useQuery({
     queryKey: ['payment-modes'],
     queryFn: async () => { const { data } = await (await import('@/services/api-endpoints')).paymentModesApi.list(); return data.data || []; },
   });
 
-  const { data: purchasesData, isLoading: purchasesLoading } = useQuery({
-    queryKey: ['supplier-outstanding', supplierId],
+  const { data: invoicesData, isLoading: invoicesLoading } = useQuery({
+    queryKey: ['customer-outstanding', customerId],
     queryFn: async () => {
-      const { data } = await purchasesApi.list({ supplier_id: supplierId, status: 'confirmed', per_page: 50 });
+      const { data } = await salesApi.list({ customer_id: customerId, status: 'confirmed', per_page: 50 });
       return data.data?.data || data.data || [];
     },
-    enabled: !!supplierId,
+    enabled: !!customerId,
   });
 
-  const suppliers: Supplier[] = Array.isArray(suppliersData) ? suppliersData : [];
+  const customers: Customer[] = Array.isArray(customersData) ? customersData : [];
   const modes: any[] = Array.isArray(paymentModes) ? paymentModes : [];
-  const outstandingPurchases: any[] = Array.isArray(purchasesData) ? purchasesData : [];
+  const outstandingInvoices: any[] = Array.isArray(invoicesData) ? invoicesData : [];
 
   useEffect(() => {
-    if (outstandingPurchases.length > 0) {
-      setAllocations(outstandingPurchases.map((p: any) => ({
-        purchase_id: p.id,
-        purchase_number: p.purchase_number,
-        purchase_date: p.purchase_date,
-        total_amount: Number(p.total_amount) || 0,
-        paid_amount: Number(p.paid_amount) || 0,
-        balance: (Number(p.total_amount) || 0) - (Number(p.paid_amount) || 0),
+    if (outstandingInvoices.length > 0) {
+      setAllocations(outstandingInvoices.map((inv: any) => ({
+        invoice_id: inv.id,
+        invoice_number: inv.invoice_number,
+        invoice_date: inv.invoice_date,
+        total_amount: Number(inv.total_amount) || 0,
+        paid_amount: Number(inv.paid_amount) || 0,
+        balance: (Number(inv.total_amount) || 0) - (Number(inv.paid_amount) || 0),
         allocated: 0,
       })));
     }
-  }, [outstandingPurchases]);
+  }, [outstandingInvoices]);
 
-  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
   const createMutation = useMutation({
-    mutationFn: (payload: any) => paymentsApi.supplierCreate(payload),
+    mutationFn: (payload: any) => paymentsApi.customerCreate(payload),
     onSuccess: () => {
       toast.success('Payment recorded successfully!');
-      queryClient.invalidateQueries({ queryKey: ['supplier-payments'] });
-      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-      navigate('/supplier-payments');
+      queryClient.invalidateQueries({ queryKey: ['customer-payments'] });
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      navigate('/customer-payments');
     },
-    onError: (err: any) => toast.error(err?.response?.data?.message || 'Failed to create payment'),
+    onError: (err: any) => {
+      const errors = err?.response?.data?.errors;
+      if (errors) {
+        const firstError = Object.values(errors)[0];
+        const msg = Array.isArray(firstError) ? firstError[0] : firstError;
+        toast.error(String(msg));
+      } else {
+        toast.error(err?.response?.data?.message || 'Failed to create payment');
+      }
+    },
   });
 
   const totalAllocated = allocations.reduce((sum, a) => sum + a.allocated, 0);
   const remainingAmount = paymentAmount - totalAllocated;
 
-  const updateAllocation = (purchaseId: number, value: number) => {
+  const updateAllocation = (invoiceId: number, value: number) => {
     setAllocations(prev => prev.map(a =>
-      a.purchase_id === purchaseId ? { ...a, allocated: Math.min(Math.max(0, value), a.balance) } : a
+      a.invoice_id === invoiceId ? { ...a, allocated: Math.min(Math.max(0, value), a.balance) } : a
     ));
   };
 
@@ -130,7 +139,7 @@ export function SupplierPaymentNewPage() {
   const onSubmit = (data: FormData) => {
     const payload: any = {
       store_id: resolvedStoreId,
-      supplier_id: data.supplier_id,
+      customer_id: data.customer_id,
       payment_date: data.payment_date,
       payment_mode_id: data.payment_mode_id,
       amount: data.amount,
@@ -142,7 +151,7 @@ export function SupplierPaymentNewPage() {
       const validAllocations = allocations.filter(a => a.allocated > 0);
       if (validAllocations.length > 0) {
         payload.allocations = validAllocations.map(a => ({
-          purchase_id: a.purchase_id,
+          invoice_id: a.invoice_id,
           allocated_amount: a.allocated,
         }));
       }
@@ -151,8 +160,8 @@ export function SupplierPaymentNewPage() {
     createMutation.mutate(payload);
   };
 
-  const navToPayment = () => navigate('/supplier-payments');
-  const navToPurchase = (id: number) => navigate('/purchases/' + id);
+  const navToPayment = () => navigate('/customer-payments');
+  const navToInvoice = (id: number) => navigate('/invoices/' + id);
 
   return (
     <div className="space-y-6">
@@ -162,8 +171,8 @@ export function SupplierPaymentNewPage() {
           <ArrowLeft className="w-5 h-5 text-neutral-500" />
         </button>
         <div>
-          <h1 className="text-[26px] font-bold text-neutral-900 tracking-tight">New Supplier Payment</h1>
-          <p className="text-sm text-neutral-500 mt-0.5">Record payment made to supplier</p>
+          <h1 className="text-[26px] font-bold text-neutral-900 tracking-tight">New Customer Payment</h1>
+          <p className="text-sm text-neutral-500 mt-0.5">Record payment received from customer</p>
         </div>
       </div>
 
@@ -175,22 +184,19 @@ export function SupplierPaymentNewPage() {
           </h2>
 
           <Select
-            label="Supplier *"
-            options={suppliers.map(s => ({ value: s.id, label: s.name, sub: s.mobile || '' }))}
-            value={supplierId || ''}
+            label="Customer *"
+            options={customers.map(c => ({ value: c.id, label: c.name, sub: c.mobile || '' }))}
+            value={customerId || ''}
             onChange={(val) => {
-              const id = Number(val); setValue('supplier_id', id);
-              setSelectedSupplier(suppliers.find(s => s.id === id) || null);
+              const id = Number(val); setValue('customer_id', id);
+              setSelectedCustomer(customers.find(c => c.id === id) || null);
             }}
-            placeholder="Select supplier..."
-            error={errors.supplier_id?.message}
+            placeholder="Select customer..."
+            error={errors.customer_id?.message}
           />
 
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="label">Payment Date *</label>
-              <DatePicker label="Payment Date *" value={watch('payment_date')} onChange={(val) => setValue('payment_date', val)} />
-            </div>
+            <DatePicker label="Payment Date *" value={watch('payment_date')} onChange={(val) => setValue('payment_date', val)} />
             <Select
               label="Payment Mode *"
               options={modes.map((m: any) => ({ value: m.id, label: m.name }))}
@@ -221,25 +227,25 @@ export function SupplierPaymentNewPage() {
             </div>
           </div>
 
-          {selectedSupplier && (
-            <div className="flex items-center gap-3 p-3 bg-cyan-50 rounded-xl text-sm">
-              <div className="w-8 h-8 rounded-lg bg-cyan-100 flex items-center justify-center">
-                <ShoppingCart className="w-4 h-4 text-cyan-600" />
+          {selectedCustomer && (
+            <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl text-sm">
+              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                <Receipt className="w-4 h-4 text-blue-600" />
               </div>
               <div>
-                <p className="font-medium text-neutral-800">{selectedSupplier.name}</p>
-                <p className="text-xs text-neutral-500">GST: {selectedSupplier.gst_number || 'N/A'} | {selectedSupplier.mobile}</p>
+                <p className="font-medium text-neutral-800">{selectedCustomer.name}</p>
+                <p className="text-xs text-neutral-500">GST: {selectedCustomer.gst_number || 'N/A'} | {selectedCustomer.mobile}</p>
               </div>
             </div>
           )}
         </div>
 
         {/* Invoice-wise Allocation */}
-        {supplierId > 0 && outstandingPurchases.length > 0 && (
+        {customerId > 0 && outstandingInvoices.length > 0 && (
           <div className="card rounded-2xl p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
-                <ShoppingCart className="w-5 h-5 text-blue-600" /> Allocate to Purchases
+                <Receipt className="w-5 h-5 text-blue-600" /> Allocate to Invoices
               </h2>
               <button
                 type="button"
@@ -269,24 +275,23 @@ export function SupplierPaymentNewPage() {
                 )}
 
                 <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {purchasesLoading ? (
+                  {invoicesLoading ? (
                     <div className="space-y-2">
-                      <div className="h-12 bg-neutral-100 rounded-xl animate-pulse" />
                       <div className="h-12 bg-neutral-100 rounded-xl animate-pulse" />
                       <div className="h-12 bg-neutral-100 rounded-xl animate-pulse" />
                     </div>
                   ) : allocations.map(a => (
-                    <div key={a.purchase_id} className="flex items-center gap-3 p-3 bg-neutral-50 rounded-xl border border-neutral-100">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-neutral-800 truncate">{a.purchase_number}</p>
-                        <p className="text-xs text-neutral-400">{formatDate(a.purchase_date)} | Balance: <span className="font-medium text-neutral-600 tabular-nums">{formatCurrency(a.balance)}</span></p>
-                      </div>
+                    <div key={a.invoice_id} className="flex items-center gap-3 p-3 bg-neutral-50 rounded-xl border border-neutral-100">
+                      <button type="button" onClick={() => navToInvoice(a.invoice_id)} className="flex-1 min-w-0 text-left">
+                        <p className="text-sm font-medium text-neutral-800 truncate hover:text-primary-600">{a.invoice_number}</p>
+                        <p className="text-xs text-neutral-400">{formatDate(a.invoice_date)} | Balance: <span className="font-medium text-neutral-600 tabular-nums">{formatCurrency(a.balance)}</span></p>
+                      </button>
                       <div className="flex items-center gap-1.5">
-                        <button type="button" onClick={() => updateAllocation(a.purchase_id, Math.max(0, a.allocated - 1000))} className="p-1 hover:bg-neutral-200 rounded-lg">
+                        <button type="button" onClick={() => updateAllocation(a.invoice_id, Math.max(0, a.allocated - 1000))} className="p-1 hover:bg-neutral-200 rounded-lg">
                           <Minus className="w-3.5 h-3.5 text-neutral-400" />
                         </button>
-                        <input type="number" className="w-24 input-field text-right text-sm py-1.5 tabular-nums font-medium" min="0" max={a.balance} step="0.01" value={a.allocated || ''} onChange={(e) => updateAllocation(a.purchase_id, Number(e.target.value))} />
-                        <button type="button" onClick={() => updateAllocation(a.purchase_id, Math.min(a.balance, a.allocated + 1000))} className="p-1 hover:bg-neutral-200 rounded-lg">
+                        <input type="number" className="w-24 input-field text-right text-sm py-1.5 tabular-nums font-medium" min="0" max={a.balance} step="0.01" value={a.allocated || ''} onChange={(e) => updateAllocation(a.invoice_id, Number(e.target.value))} />
+                        <button type="button" onClick={() => updateAllocation(a.invoice_id, Math.min(a.balance, a.allocated + 1000))} className="p-1 hover:bg-neutral-200 rounded-lg">
                           <Plus className="w-3.5 h-3.5 text-neutral-400" />
                         </button>
                       </div>
@@ -298,12 +303,12 @@ export function SupplierPaymentNewPage() {
           </div>
         )}
 
-        {/* No purchases state */}
-        {supplierId > 0 && outstandingPurchases.length === 0 && !purchasesLoading && (
+        {/* No invoices state */}
+        {customerId > 0 && outstandingInvoices.length === 0 && !invoicesLoading && (
           <div className="card rounded-2xl p-8 text-center">
-            <ShoppingCart className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
-            <p className="text-neutral-500 font-medium">No outstanding purchases</p>
-            <p className="text-sm text-neutral-400 mt-1">All purchases are fully paid. Payment will be recorded as advance.</p>
+            <Receipt className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
+            <p className="text-neutral-500 font-medium">No outstanding invoices</p>
+            <p className="text-sm text-neutral-400 mt-1">All invoices are fully paid. Payment will be recorded as advance.</p>
           </div>
         )}
 

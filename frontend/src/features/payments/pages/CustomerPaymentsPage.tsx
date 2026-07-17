@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { DataTable } from '@/components/ui/DataTable';
@@ -9,10 +8,7 @@ import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { Button } from '@/components/ui/Button';
 import { useCustomerPayments } from '@/features/purchases/api/queries';
 import { formatCurrency, formatDate } from '@/utils/format';
-import { Search, RotateCcw, CreditCard, Eye, Check, X } from 'lucide-react';
-import toast from 'react-hot-toast';
-import { paymentsApi } from '@/services/api-endpoints';
-import { useQueryClient } from '@tanstack/react-query';
+import { Search, RotateCcw, CreditCard, Eye, Pencil } from 'lucide-react';
 
 const statusOptions = [
   { value: 'draft', label: 'Draft' },
@@ -22,23 +18,11 @@ const statusOptions = [
 
 export function CustomerPaymentsPage() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
 
   const { data, isLoading, isError, refetch } = useCustomerPayments({ search: search || undefined, status: status || undefined });
   const payments = (data as any)?.items || [];
-
-  const handleAction = async (id: number, action: string) => {
-    try {
-      if (action === 'confirm') await paymentsApi.customerConfirm(id, []);
-      else if (action === 'reverse') await paymentsApi.customerReverse(id, 'Reversed by user');
-      toast.success(`Payment ${action}ed successfully`);
-      queryClient.invalidateQueries({ queryKey: ['customer-payments'] });
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || `Failed to ${action} payment`);
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -76,18 +60,16 @@ export function CustomerPaymentsPage() {
             )},
             { key: 'mode', header: 'Mode', hideOnMobile: true, render: (p: any) => p.payment_mode?.name || '-' },
             { key: 'amount', header: 'Amount', render: (p: any) => (
-              <span className="font-semibold text-emerald-600">{formatCurrency(p.amount)}</span>
+              <span className={`font-semibold tabular-nums ${p.status === 'confirmed' ? 'text-emerald-600' : p.status === 'reversed' ? 'text-neutral-400 line-through' : 'text-red-500'}`}>{formatCurrency(p.amount)}</span>
             )},
             { key: 'status', header: 'Status', render: (p: any) => <StatusBadge status={p.status} /> },
             { key: 'actions', header: '', hideOnMobile: true, render: (p: any) => (
               <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-                {p.status === 'draft' && (
-                  <Button size="sm" variant="ghost" onClick={() => handleAction(p.id, 'confirm')} title="Confirm"><Check className="w-4 h-4 text-emerald-600" /></Button>
+                {p.status === 'draft' ? (
+                  <Button size="sm" variant="ghost" title="Edit"><Pencil className="w-4 h-4 text-blue-500" /></Button>
+                ) : (
+                  <Button size="sm" variant="ghost" title="View"><Eye className="w-4 h-4" /></Button>
                 )}
-                {p.status === 'confirmed' && (
-                  <Button size="sm" variant="ghost" onClick={() => handleAction(p.id, 'reverse')} title="Reverse"><X className="w-4 h-4 text-red-500" /></Button>
-                )}
-                <Button size="sm" variant="ghost" title="View"><Eye className="w-4 h-4" /></Button>
               </div>
             )},
           ]}

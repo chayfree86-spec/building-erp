@@ -9,30 +9,15 @@ import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { Button } from '@/components/ui/Button';
 import { useSupplierPayments } from '@/features/purchases/api/queries';
 import { formatCurrency, formatDate } from '@/utils/format';
-import { Search, RotateCcw, CreditCard } from 'lucide-react';
-import toast from 'react-hot-toast';
-import { paymentsApi } from '@/services/api-endpoints';
-import { useQueryClient } from '@tanstack/react-query';
+import { Search, RotateCcw, CreditCard, Eye, Pencil } from 'lucide-react';
 
 export function SupplierPaymentsPage() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
 
   const { data, isLoading, isError, refetch } = useSupplierPayments({ search: search || undefined, status: status || undefined });
   const payments = (data as any)?.items || [];
-
-  const handleAction = async (id: number, action: string) => {
-    try {
-      if (action === 'confirm') await paymentsApi.supplierConfirm(id);
-      else if (action === 'reverse') await paymentsApi.supplierReverse(id, 'Reversed by user');
-      toast.success(`Payment ${action}ed`);
-      queryClient.invalidateQueries({ queryKey: ['supplier-payments'] });
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || `Failed to ${action}`);
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -57,12 +42,17 @@ export function SupplierPaymentsPage() {
             )},
             { key: 'supplier', header: 'Supplier', hideOnMobile: true, render: (p: any) => <div><p className="text-sm font-medium">{p.supplier?.name || '-'}</p></div> },
             { key: 'mode', header: 'Mode', hideOnMobile: true, render: (p: any) => p.payment_mode?.name || '-' },
-            { key: 'amount', header: 'Amount', render: (p: any) => <span className="font-semibold text-red-600">{formatCurrency(p.amount)}</span> },
+            { key: 'amount', header: 'Amount', render: (p: any) => (
+              <span className={`font-semibold tabular-nums ${p.status === 'confirmed' ? 'text-emerald-600' : p.status === 'reversed' ? 'text-neutral-400 line-through' : 'text-red-500'}`}>{formatCurrency(p.amount)}</span>
+            )},
             { key: 'status', header: 'Status', render: (p: any) => <StatusBadge status={p.status} /> },
-            { key: 'actions', header: '', render: (p: any) => (
-              <div className="flex gap-1">
-                {p.status === 'draft' && <Button size="sm" variant="primary" onClick={(e) => { e.stopPropagation(); handleAction(p.id, 'confirm'); }}>Confirm</Button>}
-                {p.status === 'confirmed' && <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); handleAction(p.id, 'reverse'); }}>Reverse</Button>}
+            { key: 'actions', header: '', hideOnMobile: true, render: (p: any) => (
+              <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                {p.status === 'draft' ? (
+                  <Button size="sm" variant="ghost" title="Edit"><Pencil className="w-4 h-4 text-blue-500" /></Button>
+                ) : (
+                  <Button size="sm" variant="ghost" title="View"><Eye className="w-4 h-4" /></Button>
+                )}
               </div>
             )},
           ]}

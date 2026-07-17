@@ -49,6 +49,7 @@ const PurchaseDetailPage = lazy(() => import('@/features/purchases/pages/Purchas
 const InvoiceNewPage = lazy(() => import('@/features/invoices/pages/InvoiceNewPage').then(m => ({ default: m.InvoiceNewPage })));
 const InvoiceDetailPage = lazy(() => import('@/features/invoices/pages/InvoiceDetailPage').then(m => ({ default: m.InvoiceDetailPage })));
 const SalesReturnsPage = lazy(() => import('@/features/returns/pages/SalesReturnsPage').then(m => ({ default: m.SalesReturnsPage })));
+const CustomerPaymentNewPage = lazy(() => import('@/features/payments/pages/CustomerPaymentNewPage').then(m => ({ default: m.CustomerPaymentNewPage })));
 const SupplierPaymentsPage = lazy(() => import('@/features/payments/pages/SupplierPaymentsPage').then(m => ({ default: m.SupplierPaymentsPage })));
 const SupplierPaymentNewPage = lazy(() => import('@/features/payments/pages/SupplierPaymentNewPage').then(m => ({ default: m.SupplierPaymentNewPage })));
 const StockBatchPage = lazy(() => import('@/features/stock/pages/StockBatchPage').then(m => ({ default: m.StockBatchPage })));
@@ -91,7 +92,7 @@ export default function App() {
                   <Route path="invoices/:id" element={<InvoiceDetailPage />} />
                   <Route path="sales-returns" element={<SalesReturnsPage />} />
                   <Route path="customer-payments" element={<CustomerPaymentsPage />} />
-                  <Route path="customer-payments/new" element={<CustomerPaymentsPage />} />
+                  <Route path="customer-payments/new" element={<CustomerPaymentNewPage />} />
                   <Route path="supplier-payments" element={<SupplierPaymentsPage />} />
                   <Route path="supplier-payments/new" element={<SupplierPaymentNewPage />} />
                   <Route path="stock" element={<StockPage />} />

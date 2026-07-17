@@ -188,12 +188,11 @@ export function InvoiceNewPage() {
     });
   };
 
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = async (data: FormData, autoConfirm = true) => {
     const validItems = items.filter(i => Number(i.product_id) > 0);
     if (validItems.length === 0) { toast.error('Add at least one item'); return; }
     const customer = customers.find(c => c.id === data.customer_id);
 
-    // Recalculate totals from valid items only
     const vTotals = validItems.reduce((acc, item) => ({
       subtotal: acc.subtotal + (Number(item.quantity) || 0) * (Number(item.rate) || 0),
       discount: acc.discount + (Number(item.discount_amount) || 0),
@@ -210,6 +209,7 @@ export function InvoiceNewPage() {
       customer_mobile_snapshot: customer?.mobile,
       customer_gst_snapshot: customer?.gst_number,
       remarks: data.remarks || undefined,
+      auto_confirm: autoConfirm,
       subtotal: Math.round(vTotals.subtotal * 100) / 100,
       item_discount: Math.round(vTotals.discount * 100) / 100,
       overall_discount: 0,
@@ -242,7 +242,7 @@ export function InvoiceNewPage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form className="space-y-6">
         {/* Customer & Invoice Info Card */}
         <div className="card p-6">
           <div className="flex items-center gap-2 mb-5">
@@ -365,9 +365,13 @@ export function InvoiceNewPage() {
 
         <div className="flex items-center gap-3 justify-end">
           <button type="button" onClick={() => navigate('/invoices')} className="btn btn-secondary">Cancel</button>
-          <button type="submit" disabled={items.length === 0 || createMutation.isPending} className="btn btn-primary flex items-center gap-2">
+          <button type="button" disabled={items.length === 0 || createMutation.isPending} onClick={() => handleSubmit((data) => onSubmit(data, false))()} className="btn btn-ghost border border-neutral-200 flex items-center gap-2">
             {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Save as Draft
+          </button>
+          <button type="button" disabled={items.length === 0 || createMutation.isPending} onClick={() => handleSubmit((data) => onSubmit(data, true))()} className="btn btn-primary flex items-center gap-2">
+            {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            Save & Confirm
           </button>
         </div>
       </form>

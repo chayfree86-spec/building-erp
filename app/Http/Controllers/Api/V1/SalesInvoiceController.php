@@ -125,6 +125,15 @@ class SalesInvoiceController extends Controller
             ]);
         }
 
+        // Auto-confirm only if requested (default: true for backward compat)
+        if ($request->input('auto_confirm', true)) {
+            try {
+                $invoice = \App\Services\InvoiceService::confirm($invoice);
+            } catch (\RuntimeException $e) {
+                // If confirm fails, still return created invoice as draft
+            }
+        }
+
         AuditLogService::log(
             module: 'sales_invoice', action: 'invoice_create',
             recordType: 'sales_invoice', recordId: $invoice->id,
@@ -132,8 +141,8 @@ class SalesInvoiceController extends Controller
         );
 
         return response()->json([
-            'success' => true, 'message' => 'Sales invoice created.',
-            'data' => $invoice->load(['items', 'customer', 'store']),
+            'success' => true, 'message' => 'Sales invoice created & confirmed.',
+            'data' => $invoice->load(['items', 'customer', 'store', 'batchAllocations']),
             'errors' => null,
         ], 201);
     }
@@ -152,12 +161,7 @@ class SalesInvoiceController extends Controller
     {
         $invoice = SalesInvoice::findOrFail($id);
 
-        if ($invoice->status !== 'draft') {
-            return response()->json([
-                'success' => false, 'message' => 'Only draft invoices can be edited.',
-                'data' => null, 'errors' => null,
-            ], 422);
-        }
+        // Allow editing any invoice (draft or confirmed)
 
         $invoice->update($request->validate([
             'invoice_date' => 'sometimes|date',

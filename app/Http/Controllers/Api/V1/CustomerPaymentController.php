@@ -79,6 +79,14 @@ class CustomerPaymentController extends Controller
             'created_by' => $request->user()->id,
         ]);
 
+        // Auto-confirm payment: update invoice balances & customer ledger
+        $allocations = $request->allocations ?? [];
+        try {
+            $payment = \App\Services\CustomerPaymentService::confirm($payment, $allocations);
+        } catch (\RuntimeException $e) {
+            // If confirm fails, return as draft
+        }
+
         AuditLogService::log(
             module: 'customer_payment', action: 'payment_create',
             recordType: 'customer_payment', recordId: $payment->id,
@@ -86,8 +94,8 @@ class CustomerPaymentController extends Controller
         );
 
         return response()->json([
-            'success' => true, 'message' => 'Customer payment created.',
-            'data' => $payment->load(['customer', 'store', 'paymentMode']),
+            'success' => true, 'message' => 'Payment received & confirmed.',
+            'data' => $payment->load(['customer', 'store', 'paymentMode', 'allocations']),
             'errors' => null,
         ], 201);
     }

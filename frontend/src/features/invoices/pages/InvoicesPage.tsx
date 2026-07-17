@@ -9,7 +9,7 @@ import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { Button } from '@/components/ui/Button';
 import { useInvoices } from '@/features/purchases/api/queries';
 import { formatCurrency, formatDate } from '@/utils/format';
-import { Search, RotateCcw, Receipt, Eye, Check, X, RotateCcw as ReverseIcon } from 'lucide-react';
+import { Search, RotateCcw, Receipt, Eye, X, Pencil } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { salesApi } from '@/services/api-endpoints';
 import { useQueryClient } from '@tanstack/react-query';
@@ -30,16 +30,10 @@ export function InvoicesPage() {
   const { data, isLoading, isError, refetch } = useInvoices({ search: search || undefined, status: status || undefined });
   const invoices = (data as any)?.items || [];
 
-  const handleAction = async (id: number, action: string) => {
-    try {
-      if (action === 'confirm') await salesApi.confirm(id);
-      else if (action === 'cancel') await salesApi.cancel(id, 'Cancelled by user');
-      else if (action === 'reverse') await salesApi.reverse(id, 'Reversed by user');
-      toast.success(`Invoice ${action}ed successfully`);
-      queryClient.invalidateQueries({ queryKey: ['invoices'] });
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || `Failed to ${action} invoice`);
-    }
+  const handleCancel = async (id: number) => {
+    if (!window.confirm('Cancel this invoice?')) return;
+    try { await salesApi.cancel(id, 'Cancelled by user'); toast.success('Invoice cancelled'); queryClient.invalidateQueries({ queryKey: ['invoices'] }); }
+    catch (err: any) { toast.error(err?.response?.data?.message || 'Failed'); }
   };
 
   return (
@@ -81,25 +75,22 @@ export function InvoicesPage() {
                 {inv.customer?.mobile && <p className="text-xs text-neutral-500">{inv.customer.mobile}</p>}
               </div>
             )},
-            { key: 'total', header: 'Amount', render: (inv: any) => (
+            { key: 'total', header: 'Amount', render: (inv: any) => {
+              const bal = Number(inv.total_amount || 0) - Number(inv.paid_amount || 0);
+              return (
               <div className="text-right">
                 <p className="font-semibold text-neutral-900">{formatCurrency(inv.total_amount)}</p>
                 {inv.paid_amount > 0 && <p className="text-xs text-emerald-600">Paid: {formatCurrency(inv.paid_amount)}</p>}
+                {bal > 0 && <p className="text-xs text-red-500">Balance: {formatCurrency(bal)}</p>}
               </div>
-            )},
+            );}},
             { key: 'status', header: 'Status', render: (inv: any) => <StatusBadge status={inv.status} /> },
             { key: 'actions', header: '', hideOnMobile: true, render: (inv: any) => (
               <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                <Button size="sm" variant="ghost" onClick={() => navigate(`/invoices/${inv.id}`)} title="Edit"><Pencil className="w-4 h-4 text-blue-500" /></Button>
                 {inv.status === 'draft' && (
-                  <Button size="sm" variant="ghost" onClick={() => handleAction(inv.id, 'confirm')} title="Confirm"><Check className="w-4 h-4 text-emerald-600" /></Button>
+                  <Button size="sm" variant="ghost" onClick={() => handleCancel(inv.id)} title="Cancel"><X className="w-4 h-4 text-red-500" /></Button>
                 )}
-                {inv.status === 'confirmed' && (
-                  <Button size="sm" variant="ghost" onClick={() => handleAction(inv.id, 'reverse')} title="Reverse"><ReverseIcon className="w-4 h-4 text-amber-600" /></Button>
-                )}
-                {!['cancelled', 'reversed'].includes(inv.status) && (
-                  <Button size="sm" variant="ghost" onClick={() => handleAction(inv.id, 'cancel')} title="Cancel"><X className="w-4 h-4 text-red-500" /></Button>
-                )}
-                <Button size="sm" variant="ghost" onClick={() => navigate(`/invoices/${inv.id}`)} title="View"><Eye className="w-4 h-4" /></Button>
               </div>
             )},
           ]}

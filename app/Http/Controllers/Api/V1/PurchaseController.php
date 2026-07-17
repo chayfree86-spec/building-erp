@@ -162,14 +162,7 @@ class PurchaseController extends Controller
     {
         $purchase = Purchase::findOrFail($id);
 
-        if (!in_array($purchase->status, ['draft', 'submitted'])) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Only draft or submitted purchases can be edited.',
-                'data' => null,
-                'errors' => null,
-            ], 422);
-        }
+        // Allow editing any purchase
 
         // Similar validation and update as store
         $validator = Validator::make($request->all(), [
