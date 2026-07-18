@@ -1,9 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import { MasterListPage } from '@/components/shared/MasterListPage';
 import type { FieldDef } from '@/components/shared/MasterFormModal';
-import { useUnits } from '@/features/products/api/queries';
+import { useUnits, useBrands, useCategories, useUsers } from '@/features/products/api/queries';
 import { storesApi, unitsApi, categoriesApi, brandsApi, gstRatesApi, paymentModesApi } from '@/services/api-endpoints';
-import type { Store, Unit, Category, Brand, GstRate, PaymentMode } from '@/types';
+import type { Store, Unit, Category, Brand, GstRate, PaymentMode, User } from '@/types';
 import { Store as StoreIcon, Ruler, FolderTree, Tag, Receipt, CreditCard } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -24,6 +24,7 @@ const storeFields: FieldDef[] = [
   { key: 'state', label: 'State', placeholder: 'State' },
   { key: 'pincode', label: 'Pincode', placeholder: 'Pincode' },
   { key: 'invoice_prefix', label: 'Invoice Prefix', placeholder: 'INV' },
+  { key: 'user_ids', label: 'Assigned Users', type: 'multiselect', options: [] },
   { key: 'status', label: 'Status', type: 'switch', defaultValue: 'active' },
 ];
 
@@ -38,12 +39,14 @@ const categoryFields: FieldDef[] = [
   { key: 'name', label: 'Category Name', required: true, placeholder: 'e.g. Cement' },
   { key: 'unit_id', label: 'Default Unit', type: 'select', options: [], placeholder: 'Select default unit' },
   { key: 'unit_ids', label: 'Allowed Units', type: 'multiselect', options: [] },
+  { key: 'brand_ids', label: 'Allowed Brands', type: 'multiselect', options: [] },
   { key: 'description', label: 'Description', type: 'textarea', placeholder: 'Optional description' },
   { key: 'status', label: 'Status', type: 'switch', defaultValue: 'active' },
 ];
 
 const brandFields: FieldDef[] = [
   { key: 'name', label: 'Brand Name', required: true, placeholder: 'e.g. UltraTech' },
+  { key: 'category_ids', label: 'Allowed Categories', type: 'multiselect', options: [] },
   { key: 'description', label: 'Description', type: 'textarea', placeholder: 'Optional description' },
   { key: 'status', label: 'Status', type: 'switch', defaultValue: 'active' },
 ];
@@ -61,6 +64,18 @@ const paymentModeFields: FieldDef[] = [
 ];
 
 export function StoresPage() {
+  const { data: users = [] } = useUsers();
+
+  const dynamicFields = storeFields.map(f => {
+    if (f.key === 'user_ids') {
+      return {
+        ...f,
+        options: users.map(u => ({ value: String(u.id), label: u.name })),
+      };
+    }
+    return f;
+  });
+
   return <MasterListPage<Store>
     title="Stores" description="Manage your store locations" addLabel="Add Store"
     queryKey="stores" queryFn={() => storesApi.list()}
@@ -68,11 +83,24 @@ export function StoresPage() {
       { key: 'name', header: 'Store', render: iconWrapper(StoreIcon, 'bg-primary-50', 'text-primary-600') },
       { key: 'mobile', header: 'Mobile', hideOnMobile: true, render: (s) => s.mobile || '-' },
       { key: 'city', header: 'City', hideOnMobile: true, render: (s) => s.city || '-' },
+      {
+        key: 'users',
+        header: 'Assigned Users',
+        hideOnMobile: true,
+        render: (s) => s.users && s.users.length > 0 ? s.users.map(u => u.name).join(', ') : '-'
+      }
     ]}
-    createFn={(d) => storesApi.create({ ...d, status: d.status || 'active' })}
-    updateFn={(id, d) => storesApi.update(id, d)}
+    createFn={(d) => storesApi.create({
+      ...d,
+      status: d.status || 'active',
+      user_ids: Array.isArray(d.user_ids) ? d.user_ids.map(Number) : []
+    })}
+    updateFn={(id, d) => storesApi.update(id, {
+      ...d,
+      user_ids: Array.isArray(d.user_ids) ? d.user_ids.map(Number) : []
+    })}
     deleteFn={(id) => storesApi.remove(id)}
-    formFields={storeFields}
+    formFields={dynamicFields}
     searchPlaceholder="Search stores..."
   />;
 }
@@ -97,12 +125,19 @@ export function UnitsPage() {
 export function CategoriesPage() {
   const navigate = useNavigate();
   const { data: units = [] } = useUnits();
+  const { data: brands = [] } = useBrands();
 
   const dynamicFields = categoryFields.map(f => {
     if (f.key === 'unit_id' || f.key === 'unit_ids') {
       return {
         ...f,
         options: units.map(u => ({ value: String(u.id), label: `${u.name} (${u.short_name})` })),
+      };
+    }
+    if (f.key === 'brand_ids') {
+      return {
+        ...f,
+        options: brands.map(b => ({ value: String(b.id), label: b.name })),
       };
     }
     return f;
@@ -119,6 +154,12 @@ export function CategoriesPage() {
         header: 'Allowed Units',
         hideOnMobile: true,
         render: (c) => c.units && c.units.length > 0 ? c.units.map(u => u.short_name).join(', ') : '-'
+      },
+      {
+        key: 'brands',
+        header: 'Allowed Brands',
+        hideOnMobile: true,
+        render: (c) => c.brands && c.brands.length > 0 ? c.brands.map(b => b.name).join(', ') : '-'
       },
       {
         key: 'products_count',
@@ -142,12 +183,14 @@ export function CategoriesPage() {
     createFn={(d) => categoriesApi.create({
       ...d,
       unit_id: d.unit_id ? Number(d.unit_id) : null,
-      unit_ids: Array.isArray(d.unit_ids) ? d.unit_ids.map(Number) : []
+      unit_ids: Array.isArray(d.unit_ids) ? d.unit_ids.map(Number) : [],
+      brand_ids: Array.isArray(d.brand_ids) ? d.brand_ids.map(Number) : []
     })}
     updateFn={(id, d) => categoriesApi.update(id, {
       ...d,
       unit_id: d.unit_id ? Number(d.unit_id) : null,
-      unit_ids: Array.isArray(d.unit_ids) ? d.unit_ids.map(Number) : []
+      unit_ids: Array.isArray(d.unit_ids) ? d.unit_ids.map(Number) : [],
+      brand_ids: Array.isArray(d.brand_ids) ? d.brand_ids.map(Number) : []
     })}
     deleteFn={(id) => categoriesApi.remove(id)}
     formFields={dynamicFields}
@@ -156,16 +199,40 @@ export function CategoriesPage() {
 }
 
 export function BrandsPage() {
+  const { data: categories = [] } = useCategories();
+
+  const dynamicFields = brandFields.map(f => {
+    if (f.key === 'category_ids') {
+      return {
+        ...f,
+        options: categories.map(c => ({ value: String(c.id), label: c.name })),
+      };
+    }
+    return f;
+  });
+
   return <MasterListPage<Brand>
     title="Brands" description="Manage product brands" addLabel="Add Brand"
     queryKey="brands" queryFn={() => brandsApi.list()}
     columns={[
       { key: 'name', header: 'Brand', render: iconWrapper(Tag, 'bg-purple-50', 'text-purple-600') },
+      {
+        key: 'categories',
+        header: 'Allowed Categories',
+        hideOnMobile: true,
+        render: (b) => b.categories && b.categories.length > 0 ? b.categories.map(c => c.name).join(', ') : '-'
+      }
     ]}
-    createFn={(d) => brandsApi.create(d)}
-    updateFn={(id, d) => brandsApi.update(id, d)}
+    createFn={(d) => brandsApi.create({
+      ...d,
+      category_ids: Array.isArray(d.category_ids) ? d.category_ids.map(Number) : []
+    })}
+    updateFn={(id, d) => brandsApi.update(id, {
+      ...d,
+      category_ids: Array.isArray(d.category_ids) ? d.category_ids.map(Number) : []
+    })}
     deleteFn={(id) => brandsApi.remove(id)}
-    formFields={brandFields}
+    formFields={dynamicFields}
     searchPlaceholder="Search brands..."
   />;
 }

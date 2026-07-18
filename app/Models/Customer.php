@@ -53,4 +53,17 @@ class Customer extends Model
     {
         return $this->hasMany(CustomerLedger::class);
     }
+
+    protected $appends = ['outstanding_balance'];
+
+    public function getOutstandingBalanceAttribute()
+    {
+        $openingBal = (float) $this->opening_balance;
+        $effectiveOpening = $this->opening_balance_type === 'debit' ? $openingBal : ($this->opening_balance_type === 'credit' ? -$openingBal : 0);
+
+        $totalInvoiced = $this->salesInvoices()->where('status', '!=', 'cancelled')->sum('total_amount');
+        $totalReceived = $this->payments()->where('status', 'confirmed')->sum('amount');
+
+        return $effectiveOpening + $totalInvoiced - $totalReceived;
+    }
 }

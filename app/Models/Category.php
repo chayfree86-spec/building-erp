@@ -31,6 +31,11 @@ class Category extends Model
         return $this->belongsToMany(Unit::class, 'category_units');
     }
 
+    public function brands(): BelongsToMany
+    {
+        return $this->belongsToMany(Brand::class, 'category_brands');
+    }
+
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

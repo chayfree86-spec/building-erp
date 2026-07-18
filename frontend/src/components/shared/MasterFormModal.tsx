@@ -38,6 +38,15 @@ export function MasterFormModal({ open, onClose, title, fields, initialData, onS
           if (!val && f.key === 'unit_ids' && initialData?.units) {
             val = initialData.units.map((u: any) => u.id);
           }
+          if (!val && f.key === 'brand_ids' && initialData?.brands) {
+            val = initialData.brands.map((b: any) => b.id);
+          }
+          if (!val && f.key === 'category_ids' && initialData?.categories) {
+            val = initialData.categories.map((c: any) => c.id);
+          }
+          if (!val && f.key === 'user_ids' && initialData?.users) {
+            val = initialData.users.map((u: any) => u.id);
+          }
           init[f.key] = Array.isArray(val) ? val : [];
         } else {
           init[f.key] = val !== undefined && val !== null ? String(val) : (f.defaultValue || '');

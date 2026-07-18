@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { productsApi, categoriesApi, unitsApi, brandsApi, gstRatesApi } from '@/services/api-endpoints';
-import type { Product, Category, Unit, Brand, GstRate } from '@/types';
+import { productsApi, categoriesApi, unitsApi, brandsApi, gstRatesApi, usersApi } from '@/services/api-endpoints';
+import type { Product, Category, Unit, Brand, GstRate, User } from '@/types';
 
 export function useProducts(params?: Record<string, any>) {
   return useQuery({
@@ -59,6 +59,17 @@ export function useGstRates() {
     queryFn: async () => {
       const { data } = await gstRatesApi.list();
       return data.data as GstRate[];
+    },
+  });
+}
+
+export function useUsers() {
+  return useQuery({
+    queryKey: ['users'],
+    queryFn: async () => {
+      const { data } = await usersApi.list();
+      const raw = data.data;
+      return Array.isArray(raw) ? raw : (raw?.data || []) as User[];
     },
   });
 }

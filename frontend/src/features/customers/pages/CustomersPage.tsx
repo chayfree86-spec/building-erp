@@ -101,7 +101,7 @@ export function CustomersPage() {
             )},
             { key: 'gst', header: 'GST', hideOnMobile: true, render: (c: Customer) => c.gst_number || '-' },
             { key: 'balance', header: 'Outstanding', className: 'text-right tabular-nums', render: (c: Customer) => (
-              <span className={c.opening_balance > 0 ? 'text-orange-600 font-semibold' : 'text-neutral-600'}>{formatCurrency(c.opening_balance)}</span>
+              <span className={(c.outstanding_balance ?? c.opening_balance) > 0 ? 'text-orange-600 font-semibold' : 'text-neutral-600'}>{formatCurrency(c.outstanding_balance ?? c.opening_balance)}</span>
             )},
             { key: 'status', header: 'Status', render: (c: Customer) => <StatusBadge status={c.status} /> },
             { key: 'actions', header: '', hideOnMobile: true, render: (c: Customer) => (

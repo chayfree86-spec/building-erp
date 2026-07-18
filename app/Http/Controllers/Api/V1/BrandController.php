@@ -13,7 +13,7 @@ class BrandController extends Controller
     {
         return response()->json([
             'success' => true, 'message' => 'Brands retrieved.',
-            'data' => Brand::all(), 'errors' => null,
+            'data' => Brand::with(['categories'])->get(), 'errors' => null,
         ]);
     }
 
@@ -23,13 +23,19 @@ class BrandController extends Controller
             'name' => 'required|string|max:200',
             'description' => 'nullable|string',
             'status' => 'sometimes|in:active,inactive',
+            'category_ids' => 'nullable|array',
+            'category_ids.*' => 'exists:categories,id',
         ]);
 
-        $brand = Brand::create($validated + ['created_by' => $request->user()->id]);
+        $brand = Brand::create(collect($validated)->except(['category_ids'])->toArray() + ['created_by' => $request->user()->id]);
+
+        if ($request->has('category_ids')) {
+            $brand->categories()->sync($request->category_ids);
+        }
 
         return response()->json([
             'success' => true, 'message' => 'Brand created.',
-            'data' => $brand, 'errors' => null,
+            'data' => $brand->load(['categories']), 'errors' => null,
         ], 201);
     }
 
@@ -37,7 +43,7 @@ class BrandController extends Controller
     {
         return response()->json([
             'success' => true, 'message' => 'Brand retrieved.',
-            'data' => Brand::findOrFail($id), 'errors' => null,
+            'data' => Brand::with(['categories'])->findOrFail($id), 'errors' => null,
         ]);
     }
 
@@ -45,15 +51,23 @@ class BrandController extends Controller
     {
         $brand = Brand::findOrFail($id);
 
-        $brand->update($request->validate([
+        $validated = $request->validate([
             'name' => 'sometimes|string|max:200',
             'description' => 'nullable|string',
             'status' => 'sometimes|in:active,inactive',
-        ]));
+            'category_ids' => 'nullable|array',
+            'category_ids.*' => 'exists:categories,id',
+        ]);
+
+        $brand->update(collect($validated)->except(['category_ids'])->toArray());
+
+        if ($request->has('category_ids')) {
+            $brand->categories()->sync($request->category_ids);
+        }
 
         return response()->json([
             'success' => true, 'message' => 'Brand updated.',
-            'data' => $brand, 'errors' => null,
+            'data' => $brand->load(['categories']), 'errors' => null,
         ]);
     }
 

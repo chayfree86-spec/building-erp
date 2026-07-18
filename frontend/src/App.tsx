@@ -114,6 +114,7 @@ export default function App() {
                   <Route path="reports" element={<ReportsPage />} />
                   <Route path="users" element={<UsersPage />} />
                   <Route path="users/new" element={<UserNewPage />} />
+                  <Route path="users/:id" element={<UserNewPage />} />
                   <Route path="roles" element={<RolesPage />} />
                   <Route path="permissions" element={<PermissionsPage />} />
                   <Route path="audit-logs" element={<AuditLogsPage />} />

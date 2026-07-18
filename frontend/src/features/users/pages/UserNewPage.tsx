@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -12,25 +12,57 @@ import { usersApi, rolesApi, storesApi } from '@/services/api-endpoints';
 import { handleFormKeyDown } from '@/utils/formNavigation';
 import type { Role, Store } from '@/types';
 
-const formSchema = z.object({
+const formSchema = (isEdit: boolean) => z.object({
   name: z.string().min(1, 'Name is required').max(200),
   email: z.string().email('Valid email required').optional().or(z.literal('')),
   mobile: z.string().min(1, 'Mobile is required').max(15),
-  password: z.string().min(6, 'Min 6 characters'),
+  password: isEdit ? z.string().optional().or(z.literal('')) : z.string().min(6, 'Min 6 characters'),
   role_ids: z.array(z.number()).min(1, 'At least 1 role required'),
   store_ids: z.array(z.number()).min(1, 'At least 1 store required'),
 });
 
-type FormData = z.infer<typeof formSchema>;
+type FormData = {
+  name: string;
+  email: string;
+  mobile: string;
+  password?: string;
+  role_ids: number[];
+  store_ids: number[];
+};
 
 export function UserNewPage() {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const isEdit = !!id;
+  const userId = Number(id);
   const queryClient = useQueryClient();
 
-  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormData>({
-    resolver: zodResolver(formSchema),
+  const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<FormData>({
+    resolver: zodResolver(formSchema(isEdit)),
     defaultValues: { name: '', email: '', mobile: '', password: '', role_ids: [], store_ids: [] },
   });
+
+  const { data: userData } = useQuery({
+    queryKey: ['user', userId],
+    queryFn: async () => {
+      const { data } = await usersApi.get(userId);
+      return data.data;
+    },
+    enabled: isEdit,
+  });
+
+  useEffect(() => {
+    if (userData) {
+      reset({
+        name: userData.name || '',
+        email: userData.email || '',
+        mobile: userData.mobile || '',
+        password: '',
+        role_ids: Array.isArray(userData.roles) ? userData.roles.map((r: any) => r.id) : [],
+        store_ids: Array.isArray(userData.stores) ? userData.stores.map((s: any) => s.id) : [],
+      });
+    }
+  }, [userData, reset]);
 
   const { data: rolesData } = useQuery({
     queryKey: ['roles-list'],
@@ -44,18 +76,22 @@ export function UserNewPage() {
   const roles: Role[] = Array.isArray(rolesData) ? rolesData : [];
   const stores: Store[] = Array.isArray(storesData) ? storesData : [];
 
-  const createMutation = useMutation({
-    mutationFn: (payload: any) => usersApi.create(payload),
-    onSuccess: () => { toast.success('User created!'); queryClient.invalidateQueries({ queryKey: ['users'] }); navigate('/users'); },
+  const saveMutation = useMutation({
+    mutationFn: (payload: any) => isEdit ? usersApi.update(userId, payload) : usersApi.create(payload),
+    onSuccess: () => {
+      toast.success(isEdit ? 'User updated!' : 'User created!');
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      navigate('/users');
+    },
     onError: (err: any) => toast.error(err?.response?.data?.message || 'Failed'),
   });
 
   const onSubmit = (data: FormData) => {
-    createMutation.mutate({
+    saveMutation.mutate({
       name: data.name,
       email: data.email || undefined,
       mobile: data.mobile,
-      password: data.password,
+      password: data.password || undefined,
       role_ids: data.role_ids,
       store_ids: data.store_ids,
     });
@@ -65,7 +101,7 @@ export function UserNewPage() {
     <div className="space-y-6 max-w-2xl">
       <div className="flex items-center gap-4">
         <button onClick={() => navigate('/users')} className="p-2 hover:bg-neutral-100 rounded-lg"><ArrowLeft className="w-5 h-5" /></button>
-        <div><h1 className="text-2xl font-bold text-neutral-900">New User</h1><p className="text-sm text-neutral-500">Create a new system user account</p></div>
+        <div><h1 className="text-2xl font-bold text-neutral-900">{isEdit ? 'Edit User' : 'New User'}</h1><p className="text-sm text-neutral-500">{isEdit ? 'Edit system user details' : 'Create a new system user account'}</p></div>
       </div>
       <form onSubmit={handleSubmit(onSubmit)} onKeyDown={handleFormKeyDown} className="card p-6 space-y-5">
         <div className="flex items-center gap-2 mb-2">
@@ -76,7 +112,7 @@ export function UserNewPage() {
           <div><label className="label">Name <span className="text-red-500">*</span></label><input {...register('name')} className="input-field" placeholder="Full name" />{errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}</div>
           <div><label className="label">Mobile <span className="text-red-500">*</span></label><input {...register('mobile')} className="input-field" placeholder="Mobile number" />{errors.mobile && <p className="text-red-500 text-xs mt-1">{errors.mobile.message}</p>}</div>
           <div><label className="label">Email</label><input {...register('email')} className="input-field" placeholder="Email address" />{errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}</div>
-          <div><label className="label">Password <span className="text-red-500">*</span></label><input {...register('password')} type="password" className="input-field" placeholder="Min 6 characters" />{errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}</div>
+          <div><label className="label">Password {!isEdit && <span className="text-red-500">*</span>}</label><input {...register('password')} type="password" className="input-field" placeholder={isEdit ? 'Leave blank to keep current' : 'Min 6 characters'} />{errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}</div>
         </div>
         <div><label className="label">Roles <span className="text-red-500">*</span></label>
           <div className="flex flex-wrap gap-2">
@@ -98,7 +134,7 @@ export function UserNewPage() {
         </div>
         <div className="flex items-center gap-3 justify-end pt-4 border-t">
           <Button type="button" variant="ghost" onClick={() => navigate('/users')}>Cancel</Button>
-          <Button type="submit" disabled={createMutation.isPending} icon={createMutation.isPending ? Loader2 : undefined} variant="primary">{createMutation.isPending ? 'Creating...' : 'Create User'}</Button>
+          <Button type="submit" disabled={saveMutation.isPending} icon={saveMutation.isPending ? Loader2 : undefined} variant="primary">{saveMutation.isPending ? (isEdit ? 'Saving...' : 'Creating...') : (isEdit ? 'Save Changes' : 'Create User')}</Button>
         </div>
       </form>
     </div>

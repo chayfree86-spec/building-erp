@@ -58,4 +58,17 @@ class Supplier extends Model
     {
         return $this->hasMany(SupplierLedger::class);
     }
+
+    protected $appends = ['outstanding_balance'];
+
+    public function getOutstandingBalanceAttribute()
+    {
+        $openingBal = (float) $this->opening_balance;
+        $effectiveOpening = $this->opening_balance_type === 'credit' ? $openingBal : ($this->opening_balance_type === 'debit' ? -$openingBal : 0);
+
+        $totalPurchased = $this->purchases()->where('status', '!=', 'cancelled')->sum('total_amount');
+        $totalPaid = $this->payments()->where('status', 'confirmed')->sum('amount');
+
+        return $effectiveOpening + $totalPurchased - $totalPaid;
+    }
 }

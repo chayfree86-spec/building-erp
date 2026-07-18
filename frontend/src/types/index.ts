@@ -69,6 +69,8 @@ export interface Store {
   invoice_prefix: string | null;
   status: 'active' | 'inactive';
   created_by: number;
+  users?: User[];
+  user_ids?: number[];
 }
 
 export interface Unit {
@@ -89,6 +91,8 @@ export interface Category {
   unit?: Unit;
   units?: Unit[];
   unit_ids?: number[];
+  brands?: Brand[];
+  brand_ids?: number[];
   products_count?: number;
 }
 
@@ -97,6 +101,8 @@ export interface Brand {
   name: string;
   description: string | null;
   status: 'active' | 'inactive';
+  categories?: Category[];
+  category_ids?: number[];
 }
 
 export interface GstRate {
@@ -114,7 +120,7 @@ export interface Product {
   id: number;
   category_id: number | null;
   unit_id: number;
-  brand_id: number | null;
+  brand_ids?: number[];
   gst_rate_id: number;
   name: string;
   sku: string;
@@ -125,7 +131,7 @@ export interface Product {
   status: 'active' | 'inactive';
   category?: Category;
   unit?: Unit;
-  brand?: Brand;
+  brands?: Brand[];
   gst_rate?: GstRate;
   barcodes?: ProductBarcode[];
 }
@@ -149,6 +155,7 @@ export interface Customer {
   credit_limit: number;
   status: 'active' | 'inactive';
   addresses?: CustomerAddress[];
+  outstanding_balance?: number;
 }
 
 export interface CustomerAddress {
@@ -175,6 +182,7 @@ export interface Supplier {
   status: 'active' | 'inactive';
   addresses?: SupplierAddress[];
   category?: Category;
+  outstanding_balance?: number;
 }
 
 export interface SupplierAddress {

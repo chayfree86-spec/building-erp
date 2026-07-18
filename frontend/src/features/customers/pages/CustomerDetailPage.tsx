@@ -39,7 +39,8 @@ export function CustomerDetailPage() {
         </div>
         <div className="card p-4">
           <div className="flex items-center gap-2 text-neutral-500 text-sm mb-2"><IndianRupee className="w-4 h-4" /> Financial</div>
-          <p className="font-semibold">Credit Limit: {formatCurrency(Number(customer.credit_limit))}</p>
+          <p className="font-semibold">Outstanding: {formatCurrency(Number(customer.outstanding_balance ?? customer.opening_balance))}</p>
+          <p className="text-xs text-neutral-500 mt-1">Credit Limit: {formatCurrency(Number(customer.credit_limit))}</p>
           <p className="text-xs text-neutral-400">Opening Bal: {formatCurrency(Number(customer.opening_balance))} ({customer.opening_balance_type})</p>
         </div>
       </div>

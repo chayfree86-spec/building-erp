@@ -13,7 +13,7 @@ class StoreController extends Controller
     {
         return response()->json([
             'success' => true, 'message' => 'Stores retrieved.',
-            'data' => Store::all(), 'errors' => null,
+            'data' => Store::with('users')->get(), 'errors' => null,
         ]);
     }
 
@@ -30,13 +30,19 @@ class StoreController extends Controller
             'state' => 'nullable|string|max:100',
             'pincode' => 'nullable|string|max:10',
             'invoice_prefix' => 'nullable|string|max:20',
+            'user_ids' => 'nullable|array',
+            'user_ids.*' => 'exists:users,id',
         ]);
 
-        $store = Store::create($validated + ['created_by' => $request->user()->id]);
+        $store = Store::create(collect($validated)->except(['user_ids'])->toArray() + ['created_by' => $request->user()->id]);
+
+        if ($request->has('user_ids')) {
+            $store->users()->sync($request->user_ids);
+        }
 
         return response()->json([
             'success' => true, 'message' => 'Store created.',
-            'data' => $store, 'errors' => null,
+            'data' => $store->load('users'), 'errors' => null,
         ], 201);
     }
 
@@ -44,14 +50,14 @@ class StoreController extends Controller
     {
         return response()->json([
             'success' => true, 'message' => 'Store retrieved.',
-            'data' => Store::findOrFail($id), 'errors' => null,
+            'data' => Store::with('users')->findOrFail($id), 'errors' => null,
         ]);
     }
 
     public function update(Request $request, int $id): JsonResponse
     {
         $store = Store::findOrFail($id);
-        $store->update($request->validate([
+        $validated = $request->validate([
             'name' => 'sometimes|string|max:200',
             'code' => 'sometimes|string|max:50|unique:stores,code,' . $id,
             'mobile' => 'nullable|string|max:15',
@@ -63,11 +69,19 @@ class StoreController extends Controller
             'pincode' => 'nullable|string|max:10',
             'invoice_prefix' => 'nullable|string|max:20',
             'status' => 'sometimes|in:active,inactive',
-        ]));
+            'user_ids' => 'nullable|array',
+            'user_ids.*' => 'exists:users,id',
+        ]);
+
+        $store->update(collect($validated)->except(['user_ids'])->toArray());
+
+        if ($request->has('user_ids')) {
+            $store->users()->sync($request->user_ids);
+        }
 
         return response()->json([
             'success' => true, 'message' => 'Store updated.',
-            'data' => $store, 'errors' => null,
+            'data' => $store->load('users'), 'errors' => null,
         ]);
     }
 

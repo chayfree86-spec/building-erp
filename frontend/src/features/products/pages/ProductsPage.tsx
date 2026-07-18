@@ -20,7 +20,7 @@ const productFields: FieldDef[] = [
   { key: 'sku', label: 'SKU Code', required: true, placeholder: 'e.g. CEM-001' },
   { key: 'category_id', label: 'Category', type: 'select', placeholder: 'Select category' },
   { key: 'unit_id', label: 'Unit', type: 'select', required: true, placeholder: 'Select unit' },
-  { key: 'brand_id', label: 'Brand', type: 'select', placeholder: 'Select brand' },
+  { key: 'brand_ids', label: 'Brands', type: 'multiselect', options: [] },
   { key: 'gst_rate_id', label: 'GST Rate', type: 'select', required: true, placeholder: 'Select GST rate' },
   { key: 'barcode', label: 'Barcode', placeholder: 'Scan or enter barcode' },
   { key: 'hsn_code', label: 'HSN Code', placeholder: 'e.g. 2523' },
@@ -134,7 +134,24 @@ export function ProductsPage() {
         }
       };
     }
-    if (f.key === 'brand_id') return { ...f, options: brandOptions };
+    if (f.key === 'brand_ids') {
+      return {
+        ...f,
+        options: (formData: Record<string, any>) => {
+          const selectedCatId = Number(formData.category_id);
+          const catList = Array.isArray(categories) ? categories : [];
+          const brandList = Array.isArray(brands) ? brands : [];
+
+          if (selectedCatId) {
+            const cat = catList.find(c => c.id === selectedCatId);
+            if (cat && cat.brands && cat.brands.length > 0) {
+              return cat.brands.map(b => ({ value: String(b.id), label: b.name }));
+            }
+          }
+          return brandList.map(b => ({ value: String(b.id), label: b.name }));
+        }
+      };
+    }
     if (f.key === 'gst_rate_id') return { ...f, options: gstOptions };
     return f;
   });
@@ -144,7 +161,7 @@ export function ProductsPage() {
       ...formData,
       category_id: Number(formData.category_id) || null,
       unit_id: Number(formData.unit_id) || 0,
-      brand_id: Number(formData.brand_id) || null,
+      brand_ids: Array.isArray(formData.brand_ids) ? formData.brand_ids.map(Number) : [],
       gst_rate_id: Number(formData.gst_rate_id) || 0,
       minimum_stock: Number(formData.minimum_stock) || 0,
     };
@@ -215,7 +232,7 @@ export function ProductsPage() {
               </div>
             )},
             { key: 'category', header: 'Category', hideOnMobile: true, render: (p: Product) => p.category?.name || '-' },
-            { key: 'brand', header: 'Brand', hideOnMobile: true, render: (p: Product) => p.brand?.name || '-' },
+            { key: 'brands', header: 'Brands', hideOnMobile: true, render: (p: Product) => p.brands && p.brands.length > 0 ? p.brands.map(b => b.name).join(', ') : '-' },
             { key: 'unit', header: 'Unit', hideOnMobile: true, render: (p: Product) => p.unit?.short_name || '-' },
             { key: 'gst', header: 'GST', hideOnMobile: true, render: (p: Product) => p.gst_rate ? `${Number(p.gst_rate.rate)}%` : '-' },
             { key: 'status', header: 'Status', render: (p: Product) => <StatusBadge status={p.status} /> },

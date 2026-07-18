@@ -17,7 +17,7 @@ import type { Customer } from '@/types';
 const formSchema = z.object({
   customer_id: z.number().min(1, 'Customer is required'),
   payment_date: z.string().min(1, 'Date is required'),
-  payment_mode_id: z.number().min(1, 'Payment mode is required'),
+  payment_mode_id: z.number().optional(),
   amount: z.number().min(0.01, 'Amount must be > 0'),
   transaction_reference: z.string().optional(),
   remarks: z.string().optional(),
@@ -43,6 +43,8 @@ export function CustomerPaymentNewPage() {
   const resolvedStoreId = activeStoreId !== 'all' ? Number(activeStoreId) : (stores[0]?.id || 1);
   const [allocations, setAllocations] = useState<InvoiceAllocation[]>([]);
   const [allocationMode, setAllocationMode] = useState(false);
+  const [showModeModal, setShowModeModal] = useState(false);
+  const [selectedModalMode, setSelectedModalMode] = useState<number | null>(null);
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -97,6 +99,24 @@ export function CustomerPaymentNewPage() {
 
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
+  useEffect(() => {
+    if (customerId > 0 && customers.length > 0) {
+      setSelectedCustomer(customers.find(c => c.id === customerId) || null);
+    }
+  }, [customerId, customers]);
+
+  useEffect(() => {
+    if (selectedCustomer) {
+      const outBal = Number(selectedCustomer.outstanding_balance) || 0;
+      setValue('amount', outBal > 0 ? outBal : 0);
+    }
+  }, [selectedCustomer, setValue]);
+
+  const defaultAmount = selectedCustomer ? Math.max(0, Number(selectedCustomer.outstanding_balance) || 0) : 0;
+  const isMatchingDefault = Number(paymentAmount) === defaultAmount && defaultAmount > 0;
+  const inputColorClass = isMatchingDefault ? 'text-[#e25c6a]' : 'text-emerald-600';
+  const iconColorClass = isMatchingDefault ? 'text-[#e25c6a]' : 'text-emerald-500';
+
   const createMutation = useMutation({
     mutationFn: (payload: any) => paymentsApi.customerCreate(payload),
     onSuccess: () => {
@@ -121,9 +141,14 @@ export function CustomerPaymentNewPage() {
   const remainingAmount = paymentAmount - totalAllocated;
 
   const updateAllocation = (invoiceId: number, value: number) => {
-    setAllocations(prev => prev.map(a =>
-      a.invoice_id === invoiceId ? { ...a, allocated: Math.min(Math.max(0, value), a.balance) } : a
-    ));
+    setAllocations(prev => {
+      const next = prev.map(a =>
+        a.invoice_id === invoiceId ? { ...a, allocated: Math.min(Math.max(0, value), a.balance) } : a
+      );
+      const newTotal = next.reduce((sum, a) => sum + a.allocated, 0);
+      setValue('amount', newTotal);
+      return next;
+    });
   };
 
   const autoFillAllocations = () => {
@@ -164,82 +189,111 @@ export function CustomerPaymentNewPage() {
   const navToPayment = () => navigate('/customer-payments');
   const navToInvoice = (id: number) => navigate('/invoices/' + id);
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <button onClick={navToPayment} className="p-2 hover:bg-neutral-100 rounded-xl transition-colors">
-          <ArrowLeft className="w-5 h-5 text-neutral-500" />
-        </button>
-        <div>
-          <h1 className="text-[26px] font-bold text-neutral-900 tracking-tight">New Customer Payment</h1>
-          <p className="text-sm text-neutral-500 mt-0.5">Record payment received from customer</p>
-        </div>
-      </div>
+    const isCustomerPreselected = searchParams.has('customer');
 
-      <form onSubmit={handleSubmit(onSubmit)} onKeyDown={handleFormKeyDown} className="space-y-5">
-        {/* Payment Details Card */}
-        <div className="card rounded-2xl p-6 space-y-4">
-          <h2 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
-            <CreditCard className="w-5 h-5 text-emerald-600" /> Payment Details
-          </h2>
-
-          <SearchableSelect
-            label="Customer *"
-            options={customers.map(c => ({ value: c.id, label: c.name, sub: c.mobile || '' }))}
-            value={customerId || ''}
-            onChange={(val) => {
-              const id = Number(val); setValue('customer_id', id);
-              setSelectedCustomer(customers.find(c => c.id === id) || null);
-            }}
-            placeholder="Select customer..."
-            error={errors.customer_id?.message}
-          />
-
-          <div className="grid grid-cols-2 gap-4">
-            <DatePicker label="Payment Date *" value={watch('payment_date')} onChange={(val) => setValue('payment_date', val)} />
-            <SearchableSelect
-              label="Payment Mode *"
-              options={modes.map((m: any) => ({ value: m.id, label: m.name }))}
-              value={watch('payment_mode_id') || ''}
-              onChange={(val) => setValue('payment_mode_id', Number(val))}
-              placeholder="Select mode..."
-              error={errors.payment_mode_id?.message}
-            />
-          </div>
-
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center gap-4">
+          <button onClick={navToPayment} className="p-2 hover:bg-neutral-100 rounded-xl transition-colors">
+            <ArrowLeft className="w-5 h-5 text-neutral-500" />
+          </button>
           <div>
-            <label className="label">Amount *</label>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 font-semibold text-lg pointer-events-none z-10">₹</span>
-              <input type="number" className="input-field pl-10 text-lg font-semibold tabular-nums" placeholder="0.00" step="0.01" min="0.01" {...register('amount', { valueAsNumber: true })} />
-            </div>
-            {errors.amount && <p className="text-red-500 text-xs mt-1">{errors.amount.message}</p>}
+            <h1 className="text-[26px] font-bold text-neutral-900 tracking-tight">
+              {isCustomerPreselected && selectedCustomer ? `Payment from ${selectedCustomer.name}` : 'New Customer Payment'}
+            </h1>
+            <p className="text-sm text-neutral-500 mt-0.5">Record payment received from customer</p>
           </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="label">Transaction Reference</label>
-              <input type="text" className="input-field" placeholder="Cheque #, UPI Ref" {...register('transaction_reference')} />
+        </div>
+  
+        <form onSubmit={handleSubmit(onSubmit)} onKeyDown={handleFormKeyDown} className="space-y-5">
+          {/* Payment Details Card */}
+          <div className="card rounded-2xl p-6 space-y-4">
+            <h2 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
+              <CreditCard className="w-5 h-5 text-emerald-600" /> Payment Details
+            </h2>
+  
+            {isCustomerPreselected ? (
+              <div className="flex items-center gap-3.5 p-4 bg-blue-50/50 rounded-xl border border-blue-100/80">
+                <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
+                  <Receipt className="w-5 h-5 text-blue-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-[10px] uppercase font-bold text-blue-700 tracking-wider">Customer</span>
+                  <p className="font-semibold text-neutral-900 text-[15px] leading-tight mt-0.5">{selectedCustomer?.name || 'Loading customer...'}</p>
+                  {selectedCustomer && (
+                    <p className="text-xs text-neutral-500 mt-1">
+                      GSTIN: <span className="font-medium text-neutral-700">{selectedCustomer.gst_number || 'N/A'}</span> &bull; Mobile: <span className="font-medium text-neutral-700">{selectedCustomer.mobile || 'N/A'}</span>
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <SearchableSelect
+                label="Customer *"
+                options={customers.map(c => ({ value: c.id, label: c.name, sub: c.mobile || '' }))}
+                value={customerId || ''}
+                onChange={(val) => {
+                  const id = Number(val); setValue('customer_id', id);
+                  setSelectedCustomer(customers.find(c => c.id === id) || null);
+                }}
+                placeholder="Select customer..."
+                error={errors.customer_id?.message}
+              />
+            )}
+  
+            <div className="grid grid-cols-2 gap-4">
+              <DatePicker label="Payment Date *" value={watch('payment_date')} onChange={(val) => setValue('payment_date', val)} />
+              <SearchableSelect
+                label="Payment Mode *"
+                options={modes.map((m: any) => ({ value: m.id, label: m.name }))}
+                value={watch('payment_mode_id') || ''}
+                onChange={(val) => setValue('payment_mode_id', Number(val))}
+                placeholder="Select mode..."
+                error={errors.payment_mode_id?.message}
+              />
             </div>
+  
             <div>
-              <label className="label">Remarks</label>
-              <input type="text" className="input-field" placeholder="Optional note" {...register('remarks')} />
+              <label className="label">Amount *</label>
+              <div className="relative">
+                <span className={`absolute left-4 top-1/2 -translate-y-1/2 font-semibold text-lg pointer-events-none z-10 transition-colors duration-200 ${iconColorClass}`}>₹</span>
+                <input
+                  type="number"
+                  style={{ paddingLeft: '2.75rem', color: isMatchingDefault ? '#e25c6a' : '#10B981' }}
+                  className="input-field text-lg font-semibold tabular-nums transition-colors duration-200"
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0.01"
+                  {...register('amount', { valueAsNumber: true })}
+                />
+              </div>
+              {errors.amount && <p className="text-red-500 text-xs mt-1">{errors.amount.message}</p>}
             </div>
-          </div>
-
-          {selectedCustomer && (
-            <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl text-sm">
-              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                <Receipt className="w-4 h-4 text-blue-600" />
+  
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label">Transaction Reference</label>
+                <input type="text" className="input-field" placeholder="Cheque #, UPI Ref" {...register('transaction_reference')} />
               </div>
               <div>
-                <p className="font-medium text-neutral-800">{selectedCustomer.name}</p>
-                <p className="text-xs text-neutral-500">GST: {selectedCustomer.gst_number || 'N/A'} | {selectedCustomer.mobile}</p>
+                <label className="label">Remarks</label>
+                <input type="text" className="input-field" placeholder="Optional note" {...register('remarks')} />
               </div>
             </div>
-          )}
-        </div>
+  
+            {selectedCustomer && !isCustomerPreselected && (
+              <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl text-sm">
+                <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <Receipt className="w-4 h-4 text-blue-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-neutral-800">{selectedCustomer.name}</p>
+                  <p className="text-xs text-neutral-500">GST: {selectedCustomer.gst_number || 'N/A'} | {selectedCustomer.mobile}</p>
+                </div>
+              </div>
+            )}
+          </div>
 
         {/* Invoice-wise Allocation */}
         {customerId > 0 && outstandingInvoices.length > 0 && (
@@ -282,19 +336,30 @@ export function CustomerPaymentNewPage() {
                       <div className="h-12 bg-neutral-100 rounded-xl animate-pulse" />
                     </div>
                   ) : allocations.map(a => (
-                    <div key={a.invoice_id} className="flex items-center gap-3 p-3 bg-neutral-50 rounded-xl border border-neutral-100">
+                    <div key={a.invoice_id} className="flex items-center gap-3.5 p-3 bg-neutral-50 rounded-xl border border-neutral-100 hover:bg-neutral-100/50 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={a.allocated > 0}
+                        onChange={(e) => {
+                          updateAllocation(a.invoice_id, e.target.checked ? a.balance : 0);
+                        }}
+                        className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-neutral-300 cursor-pointer"
+                      />
                       <button type="button" onClick={() => navToInvoice(a.invoice_id)} className="flex-1 min-w-0 text-left">
                         <p className="text-sm font-medium text-neutral-800 truncate hover:text-primary-600">{a.invoice_number}</p>
                         <p className="text-xs text-neutral-400">{formatDate(a.invoice_date)} | Balance: <span className="font-medium text-neutral-600 tabular-nums">{formatCurrency(a.balance)}</span></p>
                       </button>
-                      <div className="flex items-center gap-1.5">
-                        <button type="button" onClick={() => updateAllocation(a.invoice_id, Math.max(0, a.allocated - 1000))} className="p-1 hover:bg-neutral-200 rounded-lg">
-                          <Minus className="w-3.5 h-3.5 text-neutral-400" />
-                        </button>
-                        <input type="number" className="w-24 input-field text-right text-sm py-1.5 tabular-nums font-medium" min="0" max={a.balance} step="0.01" value={a.allocated || ''} onChange={(e) => updateAllocation(a.invoice_id, Number(e.target.value))} />
-                        <button type="button" onClick={() => updateAllocation(a.invoice_id, Math.min(a.balance, a.allocated + 1000))} className="p-1 hover:bg-neutral-200 rounded-lg">
-                          <Plus className="w-3.5 h-3.5 text-neutral-400" />
-                        </button>
+                      <div className="flex items-center">
+                        <input
+                          type="number"
+                          className="w-28 input-field text-right text-sm py-1.5 tabular-nums font-medium"
+                          min="0"
+                          max={a.balance}
+                          step="0.01"
+                          value={a.allocated || ''}
+                          onFocus={(e) => e.target.select()}
+                          onChange={(e) => updateAllocation(a.invoice_id, Number(e.target.value))}
+                        />
                       </div>
                     </div>
                   ))}

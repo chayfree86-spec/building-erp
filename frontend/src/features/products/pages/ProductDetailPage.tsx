@@ -34,7 +34,7 @@ export function ProductDetailPage() {
         </div>
         <div className="card p-4">
           <div className="flex items-center gap-2 text-neutral-500 text-sm mb-2"><Hash className="w-4 h-4" /> Unit & Brand</div>
-          <p className="font-semibold">{product.unit?.short_name || '-'} | {product.brand?.name || 'No brand'}</p>
+          <p className="font-semibold">{product.unit?.short_name || '-'} | {product.brands && product.brands.length > 0 ? product.brands.map(b => b.name).join(', ') : 'No brand'}</p>
         </div>
         <div className="card p-4">
           <div className="flex items-center gap-2 text-neutral-500 text-sm mb-2"><Shield className="w-4 h-4" /> GST & HSN</div>

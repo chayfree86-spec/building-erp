@@ -45,6 +45,8 @@ export function SuppliersPage() {
 
   const { data: categories = [] } = useCategories();
 
+  const totalOutstanding = suppliers.reduce((sum: number, s: Supplier) => sum + (Number(s.outstanding_balance ?? s.opening_balance) || 0), 0);
+
   const dynamicFields = baseSupplierFields.map(f => {
     if (f.key === 'category_id') {
       return {
@@ -76,10 +78,13 @@ export function SuppliersPage() {
     <div className="space-y-6">
       <PageHeader title="Suppliers" description="Manage your material suppliers" action={{ label: 'Add Supplier', icon: Plus, onClick: () => { setEditingItem(null); setModalOpen(true); } }} />
       <div className="card p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
           <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, mobile..." className="input-field has-icon" /></div>
           <Select options={[{value:'',label:'All Status'},{value:'active',label:'Active'},{value:'inactive',label:'Inactive'}]} value={status} onChange={(v) => setStatus(String(v))} />
-          <Button variant="ghost" icon={RotateCcw} onClick={() => { setSearch(''); setStatus(''); }}>Reset</Button>
+          <div className="flex items-center justify-start sm:justify-end gap-2 text-sm sm:text-base font-semibold">
+            <span className="text-neutral-500">Total Outstanding:</span>
+            <span className="font-bold tabular-nums" style={{ color: '#e25c6a' }}>{formatCurrency(totalOutstanding)}</span>
+          </div>
         </div>
       </div>
       {isLoading ? <CardSkeleton count={5} /> : isError ? <EmptyState icon="error" title="Failed to load suppliers" action={{ label: 'Retry', onClick: () => refetch() }} /> : (
@@ -101,7 +106,7 @@ export function SuppliersPage() {
               </div>
             )},
             { key: 'gst', header: 'GST', hideOnMobile: true, render: (s: Supplier) => s.gst_number || '-' },
-            { key: 'balance', header: 'Outstanding', className: 'text-right tabular-nums', render: (s: Supplier) => <span className="text-cyan-600 font-semibold">{formatCurrency(s.opening_balance)}</span> },
+            { key: 'balance', header: 'Outstanding', className: 'text-right tabular-nums', render: (s: Supplier) => <span className="font-semibold" style={{ color: '#e25c6a' }}>{formatCurrency(s.outstanding_balance ?? s.opening_balance)}</span> },
             { key: 'status', header: 'Status', render: (s: Supplier) => <StatusBadge status={s.status} /> },
             { key: 'actions', header: '', hideOnMobile: true, render: (s: Supplier) => (
               <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>

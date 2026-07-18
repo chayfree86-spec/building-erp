@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { useQuery } from '@tanstack/react-query';
 import { usersApi } from '@/services/api-endpoints';
 import { formatDate } from '@/utils/format';
-import { Search, RotateCcw, Shield, UserPlus } from 'lucide-react';
+import { Search, RotateCcw, Shield, UserPlus, Pencil, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export function UsersPage() {
@@ -62,9 +62,22 @@ export function UsersPage() {
                 {u.roles?.length ? u.roles.map((r: any) => <span key={r.id} className="text-xs bg-primary-50 text-primary-700 px-2 py-0.5 rounded-full">{r.name}</span>) : <span className="text-xs text-neutral-400">No roles</span>}
               </div>
             )},
+            { key: 'stores', header: 'Assigned Stores', hideOnMobile: true, render: (u: any) => (
+              <div className="flex flex-wrap gap-1">
+                {u.stores?.length ? u.stores.map((s: any) => <span key={s.id} className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md">{s.name}</span>) : <span className="text-xs text-neutral-400">-</span>}
+              </div>
+            )},
             { key: 'last_login', header: 'Last Login', hideOnMobile: true, render: (u: any) => u.last_login_at ? formatDate(u.last_login_at) : 'Never' },
             { key: 'status', header: 'Status', render: (u: any) => <StatusBadge status={u.status} /> },
+            { key: 'actions', header: '', hideOnMobile: true, render: (u: any) => (
+              <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                <Button size="sm" variant="ghost" onClick={() => navigate(`/users/${u.id}`)} title="Edit">
+                  <Pencil className="w-4 h-4" />
+                </Button>
+              </div>
+            )},
           ]}
+          onRowClick={u => navigate(`/users/${u.id}`)}
         />
       )}
     </div>

@@ -11,13 +11,15 @@ class ProductController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Product::with(['category', 'unit', 'brand', 'gstRate']);
+        $query = Product::with(['category', 'unit', 'brands', 'gstRate']);
 
         if ($request->category_id) {
             $query->where('category_id', $request->category_id);
         }
         if ($request->brand_id) {
-            $query->where('brand_id', $request->brand_id);
+            $query->whereHas('brands', function ($q) use ($request) {
+                $q->where('brands.id', $request->brand_id);
+            });
         }
         if ($request->status) {
             $query->where('status', $request->status);
@@ -42,7 +44,8 @@ class ProductController extends Controller
         $validated = $request->validate([
             'category_id' => 'nullable|exists:categories,id',
             'unit_id' => 'required|exists:units,id',
-            'brand_id' => 'nullable|exists:brands,id',
+            'brand_ids' => 'nullable|array',
+            'brand_ids.*' => 'exists:brands,id',
             'gst_rate_id' => 'required|exists:gst_rates,id',
             'name' => 'required|string|max:200',
             'sku' => 'required|string|max:100|unique:products,sku',
@@ -53,11 +56,15 @@ class ProductController extends Controller
             'status' => 'sometimes|in:active,inactive',
         ]);
 
-        $product = Product::create($validated + ['created_by' => $request->user()->id]);
+        $product = Product::create(collect($validated)->except(['brand_ids'])->toArray() + ['created_by' => $request->user()->id]);
+
+        if ($request->has('brand_ids')) {
+            $product->brands()->sync($request->brand_ids);
+        }
 
         return response()->json([
             'success' => true, 'message' => 'Product created.',
-            'data' => $product->load(['category', 'unit', 'brand', 'gstRate']),
+            'data' => $product->load(['category', 'unit', 'brands', 'gstRate']),
             'errors' => null,
         ], 201);
     }
@@ -66,7 +73,7 @@ class ProductController extends Controller
     {
         return response()->json([
             'success' => true, 'message' => 'Product retrieved.',
-            'data' => Product::with(['category', 'unit', 'brand', 'gstRate', 'barcodes'])
+            'data' => Product::with(['category', 'unit', 'brands', 'gstRate', 'barcodes'])
                 ->findOrFail($id),
             'errors' => null,
         ]);
@@ -76,10 +83,11 @@ class ProductController extends Controller
     {
         $product = Product::findOrFail($id);
 
-        $product->update($request->validate([
+        $validated = $request->validate([
             'category_id' => 'nullable|exists:categories,id',
             'unit_id' => 'sometimes|exists:units,id',
-            'brand_id' => 'nullable|exists:brands,id',
+            'brand_ids' => 'nullable|array',
+            'brand_ids.*' => 'exists:brands,id',
             'gst_rate_id' => 'sometimes|exists:gst_rates,id',
             'name' => 'sometimes|string|max:200',
             'sku' => 'sometimes|string|max:100|unique:products,sku,' . $id,
@@ -88,11 +96,17 @@ class ProductController extends Controller
             'description' => 'nullable|string',
             'minimum_stock' => 'nullable|numeric|min:0',
             'status' => 'sometimes|in:active,inactive',
-        ]) + ['updated_by' => $request->user()->id]);
+        ]);
+
+        $product->update(collect($validated)->except(['brand_ids'])->toArray() + ['updated_by' => $request->user()->id]);
+
+        if ($request->has('brand_ids')) {
+            $product->brands()->sync($request->brand_ids);
+        }
 
         return response()->json([
             'success' => true, 'message' => 'Product updated.',
-            'data' => $product->load(['category', 'unit', 'brand', 'gstRate']),
+            'data' => $product->load(['category', 'unit', 'brands', 'gstRate']),
             'errors' => null,
         ]);
     }

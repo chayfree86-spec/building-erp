@@ -13,7 +13,7 @@ class CategoryController extends Controller
     {
         return response()->json([
             'success' => true, 'message' => 'Categories retrieved.',
-            'data' => Category::with(['unit', 'units'])->withCount('products')->get(), 'errors' => null,
+            'data' => Category::with(['unit', 'units', 'brands'])->withCount('products')->get(), 'errors' => null,
         ]);
     }
 
@@ -24,19 +24,25 @@ class CategoryController extends Controller
             'unit_id' => 'nullable|exists:units,id',
             'unit_ids' => 'nullable|array',
             'unit_ids.*' => 'exists:units,id',
+            'brand_ids' => 'nullable|array',
+            'brand_ids.*' => 'exists:brands,id',
             'description' => 'nullable|string',
             'status' => 'sometimes|in:active,inactive',
         ]);
 
-        $category = Category::create(collect($validated)->except(['unit_ids'])->toArray() + ['created_by' => $request->user()->id]);
+        $category = Category::create(collect($validated)->except(['unit_ids', 'brand_ids'])->toArray() + ['created_by' => $request->user()->id]);
 
         if ($request->has('unit_ids')) {
             $category->units()->sync($request->unit_ids);
         }
 
+        if ($request->has('brand_ids')) {
+            $category->brands()->sync($request->brand_ids);
+        }
+
         return response()->json([
             'success' => true, 'message' => 'Category created.',
-            'data' => $category->load(['unit', 'units']), 'errors' => null,
+            'data' => $category->load(['unit', 'units', 'brands']), 'errors' => null,
         ], 201);
     }
 
@@ -44,7 +50,7 @@ class CategoryController extends Controller
     {
         return response()->json([
             'success' => true, 'message' => 'Category retrieved.',
-            'data' => Category::with(['unit', 'units'])->findOrFail($id), 'errors' => null,
+            'data' => Category::with(['unit', 'units', 'brands'])->findOrFail($id), 'errors' => null,
         ]);
     }
 
@@ -57,19 +63,25 @@ class CategoryController extends Controller
             'unit_id' => 'nullable|exists:units,id',
             'unit_ids' => 'nullable|array',
             'unit_ids.*' => 'exists:units,id',
+            'brand_ids' => 'nullable|array',
+            'brand_ids.*' => 'exists:brands,id',
             'description' => 'nullable|string',
             'status' => 'sometimes|in:active,inactive',
         ]);
 
-        $category->update(collect($validated)->except(['unit_ids'])->toArray());
+        $category->update(collect($validated)->except(['unit_ids', 'brand_ids'])->toArray());
 
         if ($request->has('unit_ids')) {
             $category->units()->sync($request->unit_ids);
         }
 
+        if ($request->has('brand_ids')) {
+            $category->brands()->sync($request->brand_ids);
+        }
+
         return response()->json([
             'success' => true, 'message' => 'Category updated.',
-            'data' => $category->load(['unit', 'units']), 'errors' => null,
+            'data' => $category->load(['unit', 'units', 'brands']), 'errors' => null,
         ]);
     }
 
