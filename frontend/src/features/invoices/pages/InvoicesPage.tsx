@@ -85,8 +85,8 @@ export function InvoicesPage() {
               </div>
             );}},
             { key: 'status', header: 'Status', render: (inv: any) => <StatusBadge status={inv.status} /> },
-            { key: 'actions', header: '', hideOnMobile: true, render: (inv: any) => (
-              <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+            { key: 'actions', header: '', hideOnMobile: true, className: 'text-right w-24', render: (inv: any) => (
+              <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
                 <Button size="sm" variant="ghost" onClick={() => navigate(`/invoices/${inv.id}`)} title="Edit"><Pencil className="w-4 h-4 text-blue-500" /></Button>
                 {inv.status === 'draft' && (
                   <Button size="sm" variant="ghost" onClick={() => handleCancel(inv.id)} title="Cancel"><X className="w-4 h-4 text-red-500" /></Button>

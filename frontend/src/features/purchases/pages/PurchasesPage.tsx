@@ -104,8 +104,8 @@ export function PurchasesPage() {
               </div>
             );}},
             { key: 'status', header: 'Status', render: (p: any) => <StatusBadge status={p.status} /> },
-            { key: 'actions', header: '', hideOnMobile: true, render: (p: any) => (
-              <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+            { key: 'actions', header: '', hideOnMobile: true, className: 'text-right w-24', render: (p: any) => (
+              <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
                 <Button size="sm" variant="ghost" onClick={() => navigate(`/purchases/${p.id}`)} title="Edit"><Pencil className="w-4 h-4 text-blue-500" /></Button>
                 {p.status === 'draft' && (
                   <Button size="sm" variant="ghost" onClick={() => handleCancel(p.id)} title="Cancel"><X className="w-4 h-4 text-red-500" /></Button>

@@ -46,8 +46,8 @@ export function SupplierPaymentsPage() {
               <span className={`font-semibold tabular-nums ${p.status === 'confirmed' ? 'text-emerald-600' : p.status === 'reversed' ? 'text-neutral-400 line-through' : 'text-red-500'}`}>{formatCurrency(p.amount)}</span>
             )},
             { key: 'status', header: 'Status', render: (p: any) => <StatusBadge status={p.status} /> },
-            { key: 'actions', header: '', hideOnMobile: true, render: (p: any) => (
-              <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+            { key: 'actions', header: '', hideOnMobile: true, className: 'text-right w-16', render: (p: any) => (
+              <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
                 {p.status === 'draft' ? (
                   <Button size="sm" variant="ghost" title="Edit"><Pencil className="w-4 h-4 text-blue-500" /></Button>
                 ) : (

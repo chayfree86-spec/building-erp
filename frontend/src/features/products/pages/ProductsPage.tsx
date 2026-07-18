@@ -236,8 +236,8 @@ export function ProductsPage() {
             { key: 'unit', header: 'Unit', hideOnMobile: true, render: (p: Product) => p.unit?.short_name || '-' },
             { key: 'gst', header: 'GST', hideOnMobile: true, render: (p: Product) => p.gst_rate ? `${Number(p.gst_rate.rate)}%` : '-' },
             { key: 'status', header: 'Status', render: (p: Product) => <StatusBadge status={p.status} /> },
-            { key: 'actions', header: '', hideOnMobile: true, render: (p: Product) => (
-              <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+            { key: 'actions', header: '', hideOnMobile: true, className: 'text-right w-24', render: (p: Product) => (
+              <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
                 <Button size="sm" variant="ghost" onClick={() => { setEditingProduct(p); setModalOpen(true); }} title="Edit">
                   <Pencil className="w-4 h-4" />
                 </Button>

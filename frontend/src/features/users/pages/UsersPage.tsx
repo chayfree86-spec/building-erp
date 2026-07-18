@@ -69,8 +69,8 @@ export function UsersPage() {
             )},
             { key: 'last_login', header: 'Last Login', hideOnMobile: true, render: (u: any) => u.last_login_at ? formatDate(u.last_login_at) : 'Never' },
             { key: 'status', header: 'Status', render: (u: any) => <StatusBadge status={u.status} /> },
-            { key: 'actions', header: '', hideOnMobile: true, render: (u: any) => (
-              <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+            { key: 'actions', header: '', hideOnMobile: true, className: 'text-right w-16', render: (u: any) => (
+              <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
                 <Button size="sm" variant="ghost" onClick={() => navigate(`/users/${u.id}`)} title="Edit">
                   <Pencil className="w-4 h-4" />
                 </Button>

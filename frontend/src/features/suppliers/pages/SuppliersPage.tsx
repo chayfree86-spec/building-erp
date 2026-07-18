@@ -20,7 +20,7 @@ import type { Supplier } from '@/types';
 const baseSupplierFields: FieldDef[] = [
   { key: 'name', label: 'Supplier Name', required: true, placeholder: 'Company or individual name' },
   { key: 'category_id', label: 'Supplier Category', type: 'select', options: [], placeholder: 'Select category' },
-  { key: 'mobile', label: 'Mobile', required: true, placeholder: '10-digit mobile number' },
+  { key: 'mobile', label: 'Mobile', placeholder: '10-digit mobile number' },
   { key: 'email', label: 'Email', placeholder: 'supplier@example.com' },
   { key: 'gst_number', label: 'GST Number', placeholder: 'GSTIN' },
   { key: 'opening_balance', label: 'Opening Balance', type: 'number', placeholder: '0', defaultValue: '0' },
@@ -108,8 +108,8 @@ export function SuppliersPage() {
             { key: 'gst', header: 'GST', hideOnMobile: true, render: (s: Supplier) => s.gst_number || '-' },
             { key: 'balance', header: 'Outstanding', className: 'text-right tabular-nums', render: (s: Supplier) => <span className="font-semibold" style={{ color: '#e25c6a' }}>{formatCurrency(s.outstanding_balance ?? s.opening_balance)}</span> },
             { key: 'status', header: 'Status', render: (s: Supplier) => <StatusBadge status={s.status} /> },
-            { key: 'actions', header: '', hideOnMobile: true, render: (s: Supplier) => (
-              <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+            { key: 'actions', header: '', hideOnMobile: true, className: 'text-right w-36', render: (s: Supplier) => (
+              <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
                 <Button size="sm" variant="ghost" onClick={() => navigate(`/supplier-payments/new?supplier=${s.id}`)} title="Pay"><CreditCard className="w-4 h-4 text-emerald-500 hover:text-emerald-700" /></Button>
                 <Button size="sm" variant="ghost" onClick={() => { setEditingItem(s); setModalOpen(true); }} title="Edit"><Pencil className="w-4 h-4 text-neutral-400 hover:text-primary-600" /></Button>
                 <Button size="sm" variant="ghost" onClick={() => handleDelete(s.id)} title="Delete"><Trash2 className="w-4 h-4 text-neutral-400 hover:text-red-500" /></Button>
