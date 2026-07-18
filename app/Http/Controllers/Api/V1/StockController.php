@@ -12,20 +12,43 @@ class StockController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = PurchaseBatch::with(['product.category', 'product.unit', 'store'])
-            ->where('available_quantity', '>', 0);
+        $query = PurchaseBatch::with(['product.category', 'product.unit', 'store', 'supplier']);
 
+        if (!$request->boolean('include_empty', false)) {
+            $query->where('available_quantity', '>', 0);
+        }
         if ($storeId = $request->header('X-Store-Id')) {
             $query->where('store_id', $storeId);
         }
         if ($request->product_id) {
             $query->where('product_id', $request->product_id);
         }
+        if ($request->supplier_id) {
+            $query->where('supplier_id', $request->supplier_id);
+        }
+        if ($request->category_id) {
+            $query->whereHas('product', function ($q) use ($request) {
+                $q->where('category_id', $request->category_id);
+            });
+        }
+        if ($request->month) {
+            $query->whereYear('purchase_date', substr($request->month, 0, 4))
+                  ->whereMonth('purchase_date', substr($request->month, 5, 2));
+        }
+        if ($request->date_from) {
+            $query->where('purchase_date', '>=', $request->date_from);
+        }
+        if ($request->date_to) {
+            $query->where('purchase_date', '<=', $request->date_to);
+        }
         if ($request->search) {
             $search = $request->search;
-            $query->whereHas('product', function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('sku', 'like', "%{$search}%");
+            $query->where(function ($q) use ($search) {
+                $q->where('batch_number', 'like', "%{$search}%")
+                  ->orWhereHas('product', function ($pq) use ($search) {
+                      $pq->where('name', 'like', "%{$search}%")
+                        ->orWhere('sku', 'like', "%{$search}%");
+                  });
             });
         }
 

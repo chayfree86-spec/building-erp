@@ -8,12 +8,13 @@ interface DatePickerProps {
   label?: string;
   error?: string;
   className?: string;
+  align?: 'left' | 'right';
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const DAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
-export function DatePicker({ value, onChange, placeholder = 'Select date...', label, error, className = '' }: DatePickerProps) {
+export function DatePicker({ value, onChange, placeholder = 'Select date...', label, error, className = '', align = 'left' }: DatePickerProps) {
   const [open, setOpen] = useState(false);
   const [viewDate, setViewDate] = useState(() => value ? new Date(value + 'T00:00:00') : new Date());
   const ref = useRef<HTMLDivElement>(null);
@@ -72,7 +73,7 @@ export function DatePicker({ value, onChange, placeholder = 'Select date...', la
         </button>
 
         {open && (
-          <div className="absolute top-full mt-1 left-0 z-50 bg-white border border-neutral-200 rounded-xl shadow-lg p-3 w-64 animate-[fadeIn_150ms_ease]">
+          <div className={`absolute top-full mt-1 ${align === 'right' ? 'right-0' : 'left-0'} z-50 bg-white border border-neutral-200 rounded-xl shadow-lg p-3 w-64 animate-[fadeIn_150ms_ease]`}>
             {/* Month Navigation */}
             <div className="flex items-center justify-between mb-3">
               <button type="button" onClick={prevMonth} className="p-1 hover:bg-neutral-100 rounded-lg">
