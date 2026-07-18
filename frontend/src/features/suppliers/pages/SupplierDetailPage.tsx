@@ -138,7 +138,7 @@ export function SupplierDetailPage() {
                 </button>
               ))}
             </div>
-            <Select options={MONTHS} value={monthFilter} onChange={setMonthFilter} placeholder="All Time" className="w-36" />
+            <Select options={MONTHS} value={monthFilter} onChange={(v) => setMonthFilter(String(v))} placeholder="All Time" className="w-36" />
           </div>
         </div>
 

@@ -91,6 +91,7 @@ class PurchaseReturnController extends Controller
         foreach ($request->items as $item) {
             PurchaseReturnItem::create([
                 'purchase_return_id' => $purchaseReturn->id,
+                'purchase_item_id' => $item['purchase_item_id'] ?? null,
                 'product_id' => $item['product_id'],
                 'batch_id' => $item['batch_id'],
                 'quantity' => $item['quantity'],

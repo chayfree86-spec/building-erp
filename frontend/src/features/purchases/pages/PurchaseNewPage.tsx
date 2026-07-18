@@ -1,16 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Plus, Trash2, Loader2, Save, Send, Calculator, Truck, X } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { Select } from '@/components/ui/Select';
+import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { DatePicker } from '@/components/ui/DatePicker';
-import { purchasesApi, productsApi, suppliersApi, storesApi } from '@/services/api-endpoints';
+import { purchasesApi, productsApi, suppliersApi, storesApi, stockApi } from '@/services/api-endpoints';
 import { useAuth } from '@/features/auth/auth-context';
 import { formatCurrency } from '@/utils/format';
+import { handleFormKeyDown } from '@/utils/formNavigation';
 import type { Product, Supplier, GstRate } from '@/types';
 
 // ─── Schema ───
@@ -31,8 +32,11 @@ const formSchema = z.object({
   purchase_date: z.string().min(1, 'Date is required'),
   supplier_invoice_number: z.string().optional(),
   remarks: z.string().optional(),
-  items: z.array(itemSchema).min(1, 'At least 1 item required'),
 });
+// Items are held in local state (for live calc) and validated manually in
+// onSubmit via `validItems`. Keeping them OUT of the form schema mirrors the
+// invoice form — otherwise the empty trailing row (product_id: 0) fails zod
+// validation and handleSubmit silently blocks the save.
 
 type FormData = z.infer<typeof formSchema>;
 
@@ -50,12 +54,11 @@ export function PurchaseNewPage() {
       purchase_date: new Date().toISOString().split('T')[0],
       supplier_invoice_number: '',
       remarks: '',
-      items: [],
     },
   });
 
   // Items state managed separately for real-time calculations
-  const [items, setItems] = useState<FormData['items']>([]);
+  const [items, setItems] = useState<z.infer<typeof itemSchema>[]>([]);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
 
   // Quick-add supplier modal
@@ -196,12 +199,29 @@ export function PurchaseNewPage() {
         if (gstRate?.rate) {
           item.gst_rate = Number(gstRate.rate) || 0;
         }
+        // Auto-fill selling price from the product's most recent batch (editable).
+        const pid = Number(value);
+        if (pid) {
+          stockApi.productStock(pid).then(({ data }: any) => {
+            const batches = data?.data?.batches || [];
+            if (batches.length > 0) {
+              const latestBatch = batches[batches.length - 1];
+              const sellPrice = Number(latestBatch.selling_price) || 0;
+              if (sellPrice > 0) {
+                setItems(prevItems => {
+                  const newItems = [...prevItems];
+                  newItems[index] = recalcItem({ ...newItems[index], selling_price: sellPrice });
+                  return newItems;
+                });
+              }
+            }
+          }).catch(() => {});
+        }
       }
       updated[index] = recalcItem(item);
       if (field === 'product_id' && Number(value) > 0 && index === prev.length - 1) {
         updated.push({ product_id: 0, quantity: 1, purchase_price: 0, selling_price: 0, gst_rate: 0, discount_amount: 0, taxable_amount: 0, tax_amount: 0, line_total: 0 });
       }
-      setValue('items', updated);
       return updated;
     });
   };
@@ -255,7 +275,7 @@ export function PurchaseNewPage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} onKeyDown={handleFormKeyDown} className="space-y-6">
         {/* Header Card */}
         <div className="card p-6">
           <div className="flex items-center gap-2 mb-5">
@@ -271,7 +291,7 @@ export function PurchaseNewPage() {
             {/* Supplier */}
             <div>
               <label className="label">Supplier <span className="text-red-500">*</span></label>
-              <Select
+              <SearchableSelect
                 options={suppliers.map(s => ({ value: s.id, label: s.name, sub: s.mobile || '' }))}
                 value={watch('supplier_id') || ''}
                 onChange={(val) => {
@@ -363,7 +383,7 @@ export function PurchaseNewPage() {
                       <tr key={idx} className="border-b border-neutral-100 hover:bg-neutral-50">
                         <td className="py-3 px-2 text-neutral-400 align-middle">{idx + 1}</td>
                         <td className="py-3 px-2 align-middle overflow-visible">
-                          <Select
+                          <SearchableSelect
                             compact
                             options={products.map(p => ({ value: p.id, label: p.name, sub: p.sku || '' }))}
                             value={item.product_id || ''}
@@ -416,10 +436,10 @@ export function PurchaseNewPage() {
                             onChange={(e) => updateItem(idx, 'gst_rate', Number(e.target.value))}
                           />
                         </td>
-                        <td className="py-3 px-2 text-right font-mono text-neutral-600 align-middle">
+                        <td className="py-3 px-2 text-right tabular-nums text-neutral-600 align-middle">
                           {formatCurrency(item.tax_amount)}
                         </td>
-                        <td className="py-3 px-2 text-right font-semibold font-mono align-middle">
+                        <td className="py-3 px-2 text-right font-semibold tabular-nums align-middle">
                           {formatCurrency(item.line_total)}
                         </td>
                         <td className="py-3 align-middle">
@@ -441,23 +461,23 @@ export function PurchaseNewPage() {
               <div className="w-72 space-y-2 text-sm">
                 <div className="flex justify-between text-neutral-600">
                   <span>Subtotal</span>
-                  <span className="font-mono">{formatCurrency(totals.subtotal)}</span>
+                  <span className="tabular-nums font-medium">{formatCurrency(totals.subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-neutral-600">
                   <span>Total Discount</span>
-                  <span className="font-mono text-red-600">-{formatCurrency(totals.discount)}</span>
+                  <span className="tabular-nums text-red-600 font-medium">-{formatCurrency(totals.discount)}</span>
                 </div>
                 <div className="flex justify-between text-neutral-600">
                   <span>Taxable Amount</span>
-                  <span className="font-mono">{formatCurrency(totals.taxable)}</span>
+                  <span className="tabular-nums font-medium">{formatCurrency(totals.taxable)}</span>
                 </div>
                 <div className="flex justify-between text-neutral-600">
                   <span>Tax Amount</span>
-                  <span className="font-mono">{formatCurrency(totals.tax)}</span>
+                  <span className="tabular-nums font-medium">{formatCurrency(totals.tax)}</span>
                 </div>
                 <div className="flex justify-between font-bold text-lg border-t pt-2 text-neutral-900">
                   <span>Total</span>
-                  <span className="font-mono">{formatCurrency(totals.total)}</span>
+                  <span className="tabular-nums">{formatCurrency(totals.total)}</span>
                 </div>
               </div>
             </div>

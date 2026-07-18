@@ -6,11 +6,12 @@ import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Plus, Trash2, Loader2, Save, UserPlus, X, ShoppingCart, User, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { Select } from '@/components/ui/Select';
+import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { salesApi, productsApi, customersApi, stockApi } from '@/services/api-endpoints';
 import { useAuth } from '@/features/auth/auth-context';
 import { formatCurrency } from '@/utils/format';
+import { handleFormKeyDown } from '@/utils/formNavigation';
 import type { Product, Customer } from '@/types';
 
 // ─── Schema ───
@@ -242,7 +243,7 @@ export function InvoiceNewPage() {
         </div>
       </div>
 
-      <form className="space-y-6">
+      <form onKeyDown={handleFormKeyDown} className="space-y-6">
         {/* Customer & Invoice Info Card */}
         <div className="card p-6">
           <div className="flex items-center gap-2 mb-5">
@@ -257,7 +258,7 @@ export function InvoiceNewPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="label">Customer <span className="text-red-500">*</span></label>
-              <Select
+              <SearchableSelect
                 options={customers.map(c => ({ value: c.id, label: c.name, sub: c.mobile || '' }))}
                 value={watch('customer_id') || ''}
                 onChange={(val) => {
@@ -328,7 +329,7 @@ export function InvoiceNewPage() {
                     <tr key={idx} className="border-b border-neutral-100 hover:bg-neutral-50">
                       <td className="py-3 px-2 text-neutral-400 align-middle">{idx + 1}</td>
                       <td className="py-3 px-2 align-middle overflow-visible">
-                        <Select
+                        <SearchableSelect
                           compact
                           options={products.map(p => ({ value: p.id, label: p.name }))}
                           value={item.product_id || ''}
@@ -340,8 +341,8 @@ export function InvoiceNewPage() {
                       <td className="py-3 px-2 align-middle"><input type="number" className="input-field w-full text-right text-sm" min="0" step="0.01" value={item.rate || ''} onChange={(e) => updateItem(idx, 'rate', Number(e.target.value))} /></td>
                       <td className="py-3 px-2 align-middle"><input type="number" className="input-field w-full text-right text-sm" min="0" step="0.01" value={item.discount_amount || ''} onChange={(e) => updateItem(idx, 'discount_amount', Number(e.target.value))} /></td>
                       <td className="py-3 px-2 align-middle"><input type="number" className="input-field w-full text-right text-sm" min="0" step="0.01" value={item.gst_rate || ''} onChange={(e) => updateItem(idx, 'gst_rate', Number(e.target.value))} /></td>
-                      <td className="py-3 px-2 text-right font-mono text-neutral-600 align-middle">{formatCurrency(item.tax_amount)}</td>
-                      <td className="py-3 px-2 text-right font-semibold font-mono align-middle">{formatCurrency(item.line_total)}</td>
+                      <td className="py-3 px-2 text-right tabular-nums text-neutral-600 align-middle">{formatCurrency(item.tax_amount)}</td>
+                      <td className="py-3 px-2 text-right font-semibold tabular-nums align-middle">{formatCurrency(item.line_total)}</td>
                       <td className="py-3 align-middle"><button type="button" onClick={() => removeItem(idx)} className="p-1 text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button></td>
                     </tr>
                   ))}
@@ -353,11 +354,11 @@ export function InvoiceNewPage() {
           {items.length > 0 && (
             <div className="mt-6 border-t pt-4 flex justify-end">
               <div className="w-72 space-y-2 text-sm">
-                <div className="flex justify-between text-neutral-600"><span>Subtotal</span><span className="font-mono">{formatCurrency(totals.subtotal)}</span></div>
-                <div className="flex justify-between text-neutral-600"><span>Discount</span><span className="font-mono text-red-600">-{formatCurrency(totals.discount)}</span></div>
-                <div className="flex justify-between text-neutral-600"><span>Taxable</span><span className="font-mono">{formatCurrency(totals.taxable)}</span></div>
-                <div className="flex justify-between text-neutral-600"><span>Tax (IGST)</span><span className="font-mono">{formatCurrency(totals.tax)}</span></div>
-                <div className="flex justify-between font-bold text-lg border-t pt-2"><span>Total</span><span className="font-mono">{formatCurrency(totals.total)}</span></div>
+                <div className="flex justify-between text-neutral-600"><span>Subtotal</span><span className="tabular-nums font-medium">{formatCurrency(totals.subtotal)}</span></div>
+                <div className="flex justify-between text-neutral-600"><span>Discount</span><span className="tabular-nums text-red-600 font-medium">-{formatCurrency(totals.discount)}</span></div>
+                <div className="flex justify-between text-neutral-600"><span>Taxable</span><span className="tabular-nums font-medium">{formatCurrency(totals.taxable)}</span></div>
+                <div className="flex justify-between text-neutral-600"><span>Tax (IGST)</span><span className="tabular-nums font-medium">{formatCurrency(totals.tax)}</span></div>
+                <div className="flex justify-between font-bold text-lg border-t pt-2 text-neutral-900"><span>Total</span><span className="tabular-nums">{formatCurrency(totals.total)}</span></div>
               </div>
             </div>
           )}

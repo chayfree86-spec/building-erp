@@ -103,6 +103,7 @@ class SalesReturnController extends Controller
         foreach ($request->items as $item) {
             SalesReturnItem::create([
                 'sales_return_id' => $salesReturn->id,
+                'invoice_item_id' => $item['invoice_item_id'] ?? null,
                 'product_id' => $item['product_id'],
                 'batch_id' => $item['batch_id'],
                 'quantity' => $item['quantity'],

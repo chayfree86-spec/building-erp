@@ -6,11 +6,12 @@ import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Loader2, Save, CreditCard, Receipt, Plus, Minus } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { Select } from '@/components/ui/Select';
+import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { paymentsApi, customersApi, salesApi } from '@/services/api-endpoints';
 import { useAuth } from '@/features/auth/auth-context';
 import { formatCurrency, formatDate } from '@/utils/format';
+import { handleFormKeyDown } from '@/utils/formNavigation';
 import type { Customer } from '@/types';
 
 const formSchema = z.object({
@@ -176,14 +177,14 @@ export function CustomerPaymentNewPage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      <form onSubmit={handleSubmit(onSubmit)} onKeyDown={handleFormKeyDown} className="space-y-5">
         {/* Payment Details Card */}
         <div className="card rounded-2xl p-6 space-y-4">
           <h2 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
             <CreditCard className="w-5 h-5 text-emerald-600" /> Payment Details
           </h2>
 
-          <Select
+          <SearchableSelect
             label="Customer *"
             options={customers.map(c => ({ value: c.id, label: c.name, sub: c.mobile || '' }))}
             value={customerId || ''}
@@ -197,7 +198,7 @@ export function CustomerPaymentNewPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <DatePicker label="Payment Date *" value={watch('payment_date')} onChange={(val) => setValue('payment_date', val)} />
-            <Select
+            <SearchableSelect
               label="Payment Mode *"
               options={modes.map((m: any) => ({ value: m.id, label: m.name }))}
               value={watch('payment_mode_id') || ''}

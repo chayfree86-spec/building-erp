@@ -127,9 +127,9 @@ export function GstRatesPage() {
     queryKey="gstRates" queryFn={() => gstRatesApi.list()}
     columns={[
       { key: 'name', header: 'Name', render: iconWrapper(Receipt, 'bg-cyan-50', 'text-cyan-600') },
-      { key: 'rate', header: 'Rate', render: (g) => `${g.rate}%`, className: 'text-right font-semibold' },
-      { key: 'cgst', header: 'CGST', hideOnMobile: true, render: (g) => `${g.cgst_rate}%` },
-      { key: 'sgst', header: 'SGST', hideOnMobile: true, render: (g) => `${g.sgst_rate}%` },
+      { key: 'rate', header: 'Rate', render: (g) => `${Number(g.rate)}%`, className: 'text-right font-semibold' },
+      { key: 'cgst', header: 'CGST', hideOnMobile: true, render: (g) => `${Number(g.cgst_rate)}%` },
+      { key: 'sgst', header: 'SGST', hideOnMobile: true, render: (g) => `${Number(g.sgst_rate)}%` },
     ]}
     createFn={async (d) => {
       const rate = parseFloat(d.rate || '0');

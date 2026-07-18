@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
 import { Button } from './Button';
-import { Plus } from 'lucide-react';
+import { Plus, type LucideIcon } from 'lucide-react';
 
 interface PageHeaderProps {
   title: string;
   description?: string;
-  action?: { label: string; onClick: () => void };
+  action?: { label: string; onClick: () => void; icon?: LucideIcon; loading?: boolean };
   children?: ReactNode;
 }
 
@@ -19,7 +19,7 @@ export function PageHeader({ title, description, action, children }: PageHeaderP
       <div className="flex items-center gap-2">
         {children}
         {action && (
-          <Button variant="primary" icon={Plus} onClick={action.onClick}>{action.label}</Button>
+          <Button variant="primary" icon={action.icon ?? Plus} loading={action.loading} onClick={action.onClick}>{action.label}</Button>
         )}
       </div>
     </div>

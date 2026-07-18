@@ -6,11 +6,12 @@ import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Loader2, Save, CreditCard, ShoppingCart, Plus, Minus } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { Select } from '@/components/ui/Select';
+import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { paymentsApi, suppliersApi, purchasesApi } from '@/services/api-endpoints';
 import { useAuth } from '@/features/auth/auth-context';
 import { formatCurrency, formatDate } from '@/utils/format';
+import { handleFormKeyDown } from '@/utils/formNavigation';
 import type { Supplier } from '@/types';
 
 const formSchema = z.object({
@@ -167,14 +168,14 @@ export function SupplierPaymentNewPage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      <form onSubmit={handleSubmit(onSubmit)} onKeyDown={handleFormKeyDown} className="space-y-5">
         {/* Payment Details Card */}
         <div className="card rounded-2xl p-6 space-y-4">
           <h2 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
             <CreditCard className="w-5 h-5 text-emerald-600" /> Payment Details
           </h2>
 
-          <Select
+          <SearchableSelect
             label="Supplier *"
             options={suppliers.map(s => ({ value: s.id, label: s.name, sub: s.mobile || '' }))}
             value={supplierId || ''}
@@ -191,7 +192,7 @@ export function SupplierPaymentNewPage() {
               <label className="label">Payment Date *</label>
               <DatePicker label="Payment Date *" value={watch('payment_date')} onChange={(val) => setValue('payment_date', val)} />
             </div>
-            <Select
+            <SearchableSelect
               label="Payment Mode *"
               options={modes.map((m: any) => ({ value: m.id, label: m.name }))}
               value={watch('payment_mode_id') || ''}

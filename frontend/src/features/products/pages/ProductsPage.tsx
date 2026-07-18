@@ -53,7 +53,7 @@ export function ProductsPage() {
   const catOptions = (categories || []).map((c: any) => ({ value: String(c.id), label: c.name }));
   const brandOptions = (brands || []).map((b: any) => ({ value: String(b.id), label: b.name }));
   const unitOptions = (units || []).map((u: any) => ({ value: String(u.id), label: `${u.name} (${u.short_name})` }));
-  const gstOptions = (gstRates || []).map((g: any) => ({ value: String(g.id), label: `${g.name} (${g.rate}%)` }));
+  const gstOptions = (gstRates || []).map((g: any) => ({ value: String(g.id), label: `${g.name} (${Number(g.rate)}%)` }));
 
   const fieldsWithOptions = productFields.map(f => {
     if (f.key === 'category_id') return { ...f, options: catOptions };
@@ -141,7 +141,7 @@ export function ProductsPage() {
             { key: 'category', header: 'Category', hideOnMobile: true, render: (p: Product) => p.category?.name || '-' },
             { key: 'brand', header: 'Brand', hideOnMobile: true, render: (p: Product) => p.brand?.name || '-' },
             { key: 'unit', header: 'Unit', hideOnMobile: true, render: (p: Product) => p.unit?.short_name || '-' },
-            { key: 'gst', header: 'GST', hideOnMobile: true, render: (p: Product) => p.gstRate ? `${p.gstRate.rate}%` : '-' },
+            { key: 'gst', header: 'GST', hideOnMobile: true, render: (p: Product) => p.gst_rate ? `${Number(p.gst_rate.rate)}%` : '-' },
             { key: 'status', header: 'Status', render: (p: Product) => <StatusBadge status={p.status} /> },
             { key: 'actions', header: '', hideOnMobile: true, render: (p: Product) => (
               <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>

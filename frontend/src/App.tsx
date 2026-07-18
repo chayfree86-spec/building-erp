@@ -49,10 +49,15 @@ const PurchaseDetailPage = lazy(() => import('@/features/purchases/pages/Purchas
 const InvoiceNewPage = lazy(() => import('@/features/invoices/pages/InvoiceNewPage').then(m => ({ default: m.InvoiceNewPage })));
 const InvoiceDetailPage = lazy(() => import('@/features/invoices/pages/InvoiceDetailPage').then(m => ({ default: m.InvoiceDetailPage })));
 const SalesReturnsPage = lazy(() => import('@/features/returns/pages/SalesReturnsPage').then(m => ({ default: m.SalesReturnsPage })));
+const StockAdjustmentNewPage = lazy(() => import('@/features/adjustments/pages/StockAdjustmentNewPage').then(m => ({ default: m.StockAdjustmentNewPage })));
+const StockTransferNewPage = lazy(() => import('@/features/transfers/pages/StockTransferNewPage').then(m => ({ default: m.StockTransferNewPage })));
+const UserNewPage = lazy(() => import('@/features/users/pages/UserNewPage').then(m => ({ default: m.UserNewPage })));
 const CustomerPaymentNewPage = lazy(() => import('@/features/payments/pages/CustomerPaymentNewPage').then(m => ({ default: m.CustomerPaymentNewPage })));
 const SupplierPaymentsPage = lazy(() => import('@/features/payments/pages/SupplierPaymentsPage').then(m => ({ default: m.SupplierPaymentsPage })));
 const SupplierPaymentNewPage = lazy(() => import('@/features/payments/pages/SupplierPaymentNewPage').then(m => ({ default: m.SupplierPaymentNewPage })));
 const StockBatchPage = lazy(() => import('@/features/stock/pages/StockBatchPage').then(m => ({ default: m.StockBatchPage })));
+const PurchaseReturnNewPage = lazy(() => import('@/features/returns/pages/PurchaseReturnNewPage').then(m => ({ default: m.PurchaseReturnNewPage })));
+const SalesReturnNewPage = lazy(() => import('@/features/returns/pages/SalesReturnNewPage').then(m => ({ default: m.SalesReturnNewPage })));
 const PermissionsPage = lazy(() => import('@/features/roles/pages/PermissionsPage').then(m => ({ default: m.PermissionsPage })));
 const MorePage = lazy(() => import('@/features/more/pages/MorePage').then(m => ({ default: m.MorePage })));
 
@@ -87,10 +92,12 @@ export default function App() {
                   <Route path="purchases/new" element={<PurchaseNewPage />} />
                   <Route path="purchases/:id" element={<PurchaseDetailPage />} />
                   <Route path="purchase-returns" element={<PurchaseReturnsPage />} />
+                  <Route path="purchase-returns/new" element={<PurchaseReturnNewPage />} />
                   <Route path="invoices" element={<InvoicesPage />} />
                   <Route path="invoices/new" element={<InvoiceNewPage />} />
                   <Route path="invoices/:id" element={<InvoiceDetailPage />} />
                   <Route path="sales-returns" element={<SalesReturnsPage />} />
+                  <Route path="sales-returns/new" element={<SalesReturnNewPage />} />
                   <Route path="customer-payments" element={<CustomerPaymentsPage />} />
                   <Route path="customer-payments/new" element={<CustomerPaymentNewPage />} />
                   <Route path="supplier-payments" element={<SupplierPaymentsPage />} />
@@ -98,12 +105,15 @@ export default function App() {
                   <Route path="stock" element={<StockPage />} />
                   <Route path="stock/batch" element={<StockBatchPage />} />
                   <Route path="stock-adjustments" element={<StockAdjustmentsPage />} />
+                  <Route path="stock-adjustments/new" element={<StockAdjustmentNewPage />} />
                   <Route path="stock-transfers" element={<StockTransfersPage />} />
+                  <Route path="stock-transfers/new" element={<StockTransferNewPage />} />
                   <Route path="ledgers/customer" element={<CustomerLedgerPage />} />
                   <Route path="ledgers/supplier" element={<SupplierLedgerPage />} />
                   <Route path="ledgers/inventory" element={<InventoryLedgerPage />} />
                   <Route path="reports" element={<ReportsPage />} />
                   <Route path="users" element={<UsersPage />} />
+                  <Route path="users/new" element={<UserNewPage />} />
                   <Route path="roles" element={<RolesPage />} />
                   <Route path="permissions" element={<PermissionsPage />} />
                   <Route path="audit-logs" element={<AuditLogsPage />} />

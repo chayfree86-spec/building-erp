@@ -9,7 +9,7 @@ import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { Button } from '@/components/ui/Button';
 import { usePurchases } from '../api/queries';
 import { formatCurrency, formatDate } from '@/utils/format';
-import { Search, RotateCcw, ShoppingCart, Plus, Eye, Check, X, Truck, Edit2, Send } from 'lucide-react';
+import { Search, RotateCcw, ShoppingCart, Plus, Eye, Check, X, Truck, Edit2, Send, Pencil } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { purchasesApi } from '@/services/api-endpoints';
 import { useQueryClient } from '@tanstack/react-query';

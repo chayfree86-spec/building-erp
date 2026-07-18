@@ -14,16 +14,19 @@ class NumberSeriesSeeder extends Seeder
         $store = Store::first();
         if (!$store) return;
 
-        // Find or create financial year
-        $fy = FinancialYear::where('start_date', '2026-04-01')->where('end_date', '2027-03-31')->first();
+        // Find existing financial year (created by SuperAdminSeeder) or create one
+        $fy = FinancialYear::where('start_date', 'like', '2026-04-01%')->where('end_date', 'like', '2027-03-31%')->first();
         if (!$fy) {
-            $fy = FinancialYear::create([
-                'name' => 'FY 2026-27',
-                'start_date' => '2026-04-01',
-                'end_date' => '2027-03-31',
-                'is_active' => true,
-                'is_closed' => false,
-            ]);
+            $fy = FinancialYear::firstOrCreate(
+                ['name' => '2026-27'],
+                [
+                    'name' => '2026-27',
+                    'start_date' => '2026-04-01',
+                    'end_date' => '2027-03-31',
+                    'is_active' => true,
+                    'is_closed' => false,
+                ]
+            );
         }
 
         $series = [

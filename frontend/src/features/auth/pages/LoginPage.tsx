@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
+import { handleFormKeyDown } from '@/utils/formNavigation';
 
 const loginSchema = z.object({
   login: z.string().min(1, 'Email or mobile is required'),
@@ -166,7 +167,7 @@ export function LoginPage() {
               <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">{error}</div>
             )}
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={handleSubmit(onSubmit)} onKeyDown={handleFormKeyDown} className="space-y-4">
               <div>
                 <label className="label">Email or Mobile Number</label>
                 <input {...register('login')} type="text" placeholder="Enter email or mobile" className="input-field" autoComplete="username" autoFocus />

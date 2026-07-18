@@ -38,7 +38,7 @@ export function ProductDetailPage() {
         </div>
         <div className="card p-4">
           <div className="flex items-center gap-2 text-neutral-500 text-sm mb-2"><Shield className="w-4 h-4" /> GST & HSN</div>
-          <p className="font-semibold">{product.gstRate?.name || 'N/A'} | HSN: {product.hsn_code || '-'}</p>
+          <p className="font-semibold">{product.gst_rate?.name || 'N/A'} | HSN: {product.hsn_code || '-'}</p>
         </div>
       </div>
 
@@ -48,7 +48,7 @@ export function ProductDetailPage() {
           <div><span className="text-neutral-500">Barcode</span><p className="font-medium">{product.barcode || '-'}</p></div>
           <div><span className="text-neutral-500">Min Stock</span><p className="font-medium">{product.minimum_stock}</p></div>
           <div><span className="text-neutral-500">Status</span><p className={`font-medium ${product.status === 'active' ? 'text-green-600' : 'text-red-600'}`}>{product.status}</p></div>
-          <div><span className="text-neutral-500">GST Rate</span><p className="font-medium">{product.gstRate?.rate || 0}%</p></div>
+          <div><span className="text-neutral-500">GST Rate</span><p className="font-medium">{Number(product.gst_rate?.rate) || 0}%</p></div>
         </div>
         {product.description && <div className="mt-4 pt-4 border-t"><span className="text-sm text-neutral-500">Description</span><p className="mt-1 text-neutral-700">{product.description}</p></div>}
       </div>

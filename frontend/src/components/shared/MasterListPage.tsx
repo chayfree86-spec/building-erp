@@ -26,7 +26,7 @@ interface MasterListConfig<T> {
     className?: string;
     hideOnMobile?: boolean;
   }[];
-  statusField?: string;
+  statusField?: string | false;
   onRowClick?: (item: T) => void;
   searchPlaceholder?: string;
   // CRUD API functions (optional — enables inline CRUD)
@@ -58,13 +58,20 @@ export function MasterListPage<T extends { id: number; status?: string; name?: s
   const filtered = search ? items.filter((item: any) =>
     Object.values(item).some(v => typeof v === 'string' && v.toLowerCase().includes(search.toLowerCase()))
   ) : items;
-  const finalItems = status ? filtered.filter((item: any) => item.status === status || item[statusField || 'status'] === status) : filtered;
+  // Some masters (e.g. payment modes) expose a boolean `is_active` instead of a
+  // string `status`. Normalise both to 'active'/'inactive' so the badge and the
+  // status filter behave consistently across every master list.
+  const normStatus = (item: any): string => {
+    const raw = item[statusField || 'status'] ?? item.status ?? 'active';
+    return typeof raw === 'boolean' ? (raw ? 'active' : 'inactive') : String(raw);
+  };
+  const finalItems = status ? filtered.filter((item: any) => normStatus(item) === status) : filtered;
 
   const cols = [...columns];
   if (statusField !== false) {
     cols.push({
       key: 'status', header: 'Status', className: 'w-28',
-      render: (item: T) => <StatusBadge status={(item as any)[statusField || 'status'] || item.status || 'active'} />,
+      render: (item: T) => <StatusBadge status={normStatus(item)} />,
     });
   }
 

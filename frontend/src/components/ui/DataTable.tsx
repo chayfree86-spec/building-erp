@@ -13,7 +13,7 @@ interface Column<T> {
 interface DataTableProps<T> {
   columns: Column<T>[];
   data: T[];
-  keyExtractor: (item: T) => string | number;
+  keyExtractor: (item: T, index: number) => string | number;
   loading?: boolean;
   emptyMessage?: string;
   onRowClick?: (item: T) => void;
@@ -63,9 +63,9 @@ export function DataTable<T>({
             </tr>
           </thead>
           <tbody>
-            {safeData.map(item => (
+            {safeData.map((item, idx) => (
               <tr
-                key={keyExtractor(item)}
+                key={keyExtractor(item, idx)}
                 onClick={() => onRowClick?.(item)}
                 className={`border-b border-neutral-50 hover:bg-neutral-50/50 transition-colors ${onRowClick ? 'cursor-pointer' : ''}`}
               >
@@ -82,8 +82,8 @@ export function DataTable<T>({
 
       {/* Mobile Cards */}
       <div className="md:hidden divide-y divide-neutral-100">
-        {safeData.map(item => (
-          <div key={keyExtractor(item)} onClick={() => onRowClick?.(item)} className="p-4 hover:bg-neutral-50 transition-colors">
+        {safeData.map((item, idx) => (
+          <div key={keyExtractor(item, idx)} onClick={() => onRowClick?.(item)} className="p-4 hover:bg-neutral-50 transition-colors">
             {columns.filter(c => !c.hideOnMobile).map((col, i) => (
               <div key={col.key} className={`flex items-center justify-between ${i > 0 ? 'mt-2' : ''}`}>
                 <span className="text-xs text-neutral-500">{col.header}</span>

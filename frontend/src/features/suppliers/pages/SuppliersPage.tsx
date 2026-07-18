@@ -63,7 +63,7 @@ export function SuppliersPage() {
       <div className="card p-4">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, mobile..." className="input-field has-icon" /></div>
-          <Select options={[{value:'',label:'All Status'},{value:'active',label:'Active'},{value:'inactive',label:'Inactive'}]} value={status} onChange={setStatus} />
+          <Select options={[{value:'',label:'All Status'},{value:'active',label:'Active'},{value:'inactive',label:'Inactive'}]} value={status} onChange={(v) => setStatus(String(v))} />
           <Button variant="ghost" icon={RotateCcw} onClick={() => { setSearch(''); setStatus(''); }}>Reset</Button>
         </div>
       </div>

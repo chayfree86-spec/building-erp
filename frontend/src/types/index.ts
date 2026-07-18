@@ -123,7 +123,7 @@ export interface Product {
   category?: Category;
   unit?: Unit;
   brand?: Brand;
-  gstRate?: GstRate;
+  gst_rate?: GstRate;
   barcodes?: ProductBarcode[];
 }
 
