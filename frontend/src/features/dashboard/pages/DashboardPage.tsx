@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { TrendingUp, TrendingDown, DollarSign, Users, Package, AlertTriangle, Clock, ArrowUpRight, ShoppingCart, Receipt } from 'lucide-react';
 import { reportsApi } from '@/services/api-endpoints';
-import { formatCurrency } from '@/utils/format';
+import { formatCurrency, getLocalDateString } from '@/utils/format';
 
 const colorMap: Record<string, { bg: string; text: string; icon: string }> = {
   blue: { bg: 'bg-blue-50', text: 'text-blue-700', icon: 'text-blue-600' },
@@ -21,10 +21,9 @@ type Period = 'today' | 'week' | 'month';
 export function DashboardPage() {
   const [period, setPeriod] = useState<Period>('today');
 
-  // Date ranges
-  const today = new Date().toISOString().slice(0, 10);
-  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
-  const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+  const today = getLocalDateString(new Date());
+  const weekAgo = getLocalDateString(new Date(Date.now() - 7 * 86400000));
+  const monthAgo = getLocalDateString(new Date(Date.now() - 30 * 86400000));
   const dateFrom = period === 'today' ? today : period === 'week' ? weekAgo : monthAgo;
 
   // Fetch real data
@@ -132,7 +131,7 @@ export function DashboardPage() {
               {dailySales.invoices.slice(0, 5).map((inv: any) => (
                 <div key={inv.id} className="flex items-center justify-between py-2 border-b border-neutral-50">
                   <div>
-                    <p className="text-sm font-medium text-neutral-700">{inv.invoice_no}</p>
+                    <p className="text-sm font-medium text-neutral-700">{inv.invoice_number}</p>
                     <p className="text-xs text-neutral-500">{inv.customer_name_snapshot || inv.customer?.name || 'Walk-in'}</p>
                   </div>
                   <span className="text-sm font-semibold tabular-nums">{formatCurrency(inv.total_amount)}</span>

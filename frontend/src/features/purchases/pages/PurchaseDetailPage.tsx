@@ -86,8 +86,32 @@ export function PurchaseDetailPage() {
     return {subtotal:Math.round(s*100)/100,discount:d,tax:t,total:tot};
   };
   const totals = editMode ? calcTot() : {subtotal:Number(purchase.subtotal),discount:Number(purchase.discount_amount||0),tax:Number(purchase.tax_amount||0),total:Number(purchase.total_amount)};
-  const handleSave = () => updateMutation.mutate({subtotal:totals.subtotal,discount_amount:totals.discount,tax_amount:totals.tax,total_amount:totals.total,
-    items:editedItems.map((item:any)=>({id:item.id,product_id:item.product_id,quantity:Number(item.quantity)||0,purchase_price:Number(item.purchase_price)||0,selling_price:Number(item.selling_price)||0,discount_amount:Number(item.discount_amount)||0,gst_rate:Number(item.gst_rate)||0,taxable_amount:Number(item.taxable_amount)||0,tax_amount:Number(item.tax_amount)||0,line_total:Number(item.line_total)||0}))});
+  const handleSave = () => {
+    updateMutation.mutate({
+      supplier_id: purchase.supplier_id,
+      purchase_date: purchase.purchase_date,
+      supplier_invoice_number: purchase.supplier_invoice_number,
+      additional_cost: Number(purchase.additional_cost) || 0,
+      round_off: Number(purchase.round_off) || 0,
+      remarks: purchase.remarks,
+      subtotal: totals.subtotal,
+      discount_amount: totals.discount,
+      tax_amount: totals.tax,
+      total_amount: totals.total,
+      items: editedItems.map((item: any) => ({
+        id: item.id,
+        product_id: item.product_id,
+        quantity: Number(item.quantity) || 0,
+        purchase_price: Number(item.purchase_price) || 0,
+        selling_price: Number(item.selling_price) || 0,
+        discount_amount: Number(item.discount_amount) || 0,
+        gst_rate: Number(item.gst_rate) || 0,
+        taxable_amount: Number(item.taxable_amount) || 0,
+        tax_amount: Number(item.tax_amount) || 0,
+        line_total: Number(item.line_total) || 0,
+      })),
+    });
+  };
 
   return (
     <div className="space-y-6">

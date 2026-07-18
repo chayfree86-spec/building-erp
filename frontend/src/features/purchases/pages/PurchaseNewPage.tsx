@@ -11,7 +11,7 @@ import { Select } from '@/components/ui/Select';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { purchasesApi, productsApi, suppliersApi, storesApi, stockApi, categoriesApi } from '@/services/api-endpoints';
 import { useAuth } from '@/features/auth/auth-context';
-import { formatCurrency } from '@/utils/format';
+import { formatCurrency, getLocalDateString } from '@/utils/format';
 import { handleFormKeyDown } from '@/utils/formNavigation';
 import type { Product, Supplier, GstRate, Category } from '@/types';
 
@@ -52,7 +52,7 @@ export function PurchaseNewPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       supplier_id: 0,
-      purchase_date: new Date().toISOString().split('T')[0],
+      purchase_date: getLocalDateString(),
       supplier_invoice_number: '',
       remarks: '',
     },

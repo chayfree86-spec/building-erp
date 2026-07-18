@@ -19,3 +19,8 @@ export function formatDateTime(date: string | Date): string {
 export function cn(...classes: (string | undefined | false | null)[]): string {
   return classes.filter(Boolean).join(' ');
 }
+
+export function getLocalDateString(d: Date = new Date()): string {
+  const tzOffset = d.getTimezoneOffset() * 60000;
+  return new Date(d.getTime() - tzOffset).toISOString().split('T')[0];
+}

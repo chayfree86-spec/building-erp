@@ -26,6 +26,16 @@ class InvoiceService
             $invoice->load('items');
 
             foreach ($invoice->items as $item) {
+                // Check if the product belongs to a service category
+                $product = \App\Models\Product::with('category')->find($item->product_id);
+                $isService = $product && in_array(strtolower($product->category?->name ?? ''), [
+                    'services & charges', 'services', 'charges', 'extra charges', 'other charges', 'service'
+                ]);
+
+                if ($isService) {
+                    continue;
+                }
+
                 // Perform FIFO allocation
                 $allocations = FifoStockService::allocate(
                     storeId: $invoice->store_id,

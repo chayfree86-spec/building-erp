@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { returnsApi, salesApi } from '@/services/api-endpoints';
 import { useAuth } from '@/features/auth/auth-context';
 import { handleFormKeyDown } from '@/utils/formNavigation';
+import { getLocalDateString } from '@/utils/format';
 
 const itemSchema = z.object({
   product_id: z.number().min(1), batch_id: z.number().min(0),
@@ -37,7 +38,7 @@ export function SalesReturnNewPage() {
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(formSchema),
-    defaultValues: { invoice_id: 0, customer_id: 0, return_date: new Date().toISOString().split('T')[0], remarks: '' },
+    defaultValues: { invoice_id: 0, customer_id: 0, return_date: getLocalDateString(), remarks: '' },
   });
 
   const [items, setItems] = useState<any[]>([]);

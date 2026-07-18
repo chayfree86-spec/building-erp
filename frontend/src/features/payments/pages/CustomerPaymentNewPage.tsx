@@ -10,7 +10,7 @@ import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { paymentsApi, customersApi, salesApi } from '@/services/api-endpoints';
 import { useAuth } from '@/features/auth/auth-context';
-import { formatCurrency, formatDate } from '@/utils/format';
+import { formatCurrency, formatDate, getLocalDateString } from '@/utils/format';
 import { handleFormKeyDown } from '@/utils/formNavigation';
 import type { Customer } from '@/types';
 
@@ -50,7 +50,7 @@ export function CustomerPaymentNewPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       customer_id: Number(searchParams.get('customer')) || 0,
-      payment_date: new Date().toISOString().split('T')[0],
+      payment_date: getLocalDateString(),
       payment_mode_id: 0,
       amount: 0,
       transaction_reference: '',

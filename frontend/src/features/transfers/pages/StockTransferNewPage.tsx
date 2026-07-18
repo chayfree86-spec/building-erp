@@ -11,8 +11,7 @@ import { DatePicker } from '@/components/ui/DatePicker';
 import { Button } from '@/components/ui/Button';
 import { transfersApi, productsApi, stockApi, storesApi } from '@/services/api-endpoints';
 import { useAuth } from '@/features/auth/auth-context';
-import { handleFormKeyDown } from '@/utils/formNavigation';
-import type { Product, Store } from '@/types';
+import { getLocalDateString } from '@/utils/format';
 
 const itemSchema = z.object({
   product_id: z.number().min(1, 'Product is required'),
@@ -46,7 +45,7 @@ export function StockTransferNewPage() {
     defaultValues: {
       source_store_id: activeStoreId !== 'all' ? Number(activeStoreId) : (stores[0]?.id || 0),
       destination_store_id: 0,
-      transfer_date: new Date().toISOString().split('T')[0],
+      transfer_date: getLocalDateString(),
       remarks: '',
     },
   });

@@ -11,13 +11,14 @@ import { Select } from '@/components/ui/Select';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { salesApi, productsApi, customersApi, stockApi, categoriesApi } from '@/services/api-endpoints';
 import { useAuth } from '@/features/auth/auth-context';
-import { formatCurrency } from '@/utils/format';
+import { formatCurrency, getLocalDateString } from '@/utils/format';
 import { handleFormKeyDown } from '@/utils/formNavigation';
 import type { Product, Customer, Category } from '@/types';
 
 // ─── Schema ───
 const itemSchema = z.object({
   product_id: z.number().min(1, 'Required'),
+  product_name_snapshot: z.string().optional(),
   unit_id: z.number().optional().default(0),
   quantity: z.number().min(0.001, 'Min 0.001'),
   rate: z.number().min(0, 'Min 0'),
@@ -29,9 +30,11 @@ const itemSchema = z.object({
 });
 
 const formSchema = z.object({
-  customer_id: z.number().min(1, 'Customer is required'),
+  customer_id: z.number().optional().default(0),
   invoice_date: z.string().min(1, 'Date is required'),
   remarks: z.string().optional(),
+  guest_name: z.string().optional(),
+  guest_mobile: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -46,13 +49,16 @@ export function InvoiceNewPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       customer_id: 0,
-      invoice_date: new Date().toISOString().split('T')[0],
+      invoice_date: getLocalDateString(),
       remarks: '',
+      guest_name: '',
+      guest_mobile: '',
     },
   });
 
   const [items, setItems] = useState<z.infer<typeof itemSchema>[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [isGuestMode, setIsGuestMode] = useState(false);
 
   // Quick-add customer modal
   const [showQuickAdd, setShowQuickAdd] = useState(false);
@@ -160,7 +166,7 @@ export function InvoiceNewPage() {
     total: acc.total + (Number(item.line_total) || 0),
   }), { subtotal: 0, discount: 0, taxable: 0, tax: 0, total: 0 });
 
-  const addItem = () => setItems([...items, { product_id: 0, unit_id: 0, quantity: 1, rate: 0, gst_rate: 0, discount_amount: 0, taxable_amount: 0, tax_amount: 0, line_total: 0 }]);
+  const addItem = () => setItems([...items, { product_id: 0, product_name_snapshot: '', unit_id: 0, quantity: 1, rate: 0, gst_rate: 0, discount_amount: 0, taxable_amount: 0, tax_amount: 0, line_total: 0 }]);
   const removeItem = (i: number) => setItems(items.filter((_, idx) => idx !== i));
 
   const updateItem = (index: number, field: string, value: any) => {
@@ -173,6 +179,7 @@ export function InvoiceNewPage() {
         if (gstRate?.rate) item.gst_rate = Number(gstRate.rate) || 0;
         if (product) {
           item.unit_id = product.unit_id || 0;
+          item.product_name_snapshot = product.name;
         }
         const pid = Number(value);
         if (pid) {
@@ -194,16 +201,20 @@ export function InvoiceNewPage() {
       }
       updated[index] = recalcItem(item);
       if (field === 'product_id' && Number(value) > 0 && index === prev.length - 1) {
-        updated.push({ product_id: 0, unit_id: 0, quantity: 1, rate: 0, gst_rate: 0, discount_amount: 0, taxable_amount: 0, tax_amount: 0, line_total: 0 });
+        updated.push({ product_id: 0, product_name_snapshot: '', unit_id: 0, quantity: 1, rate: 0, gst_rate: 0, discount_amount: 0, taxable_amount: 0, tax_amount: 0, line_total: 0 });
       }
       return updated;
     });
   };
 
   const onSubmit = async (data: FormData, autoConfirm = true) => {
+    if (!isGuestMode && (!data.customer_id || data.customer_id === 0)) {
+      toast.error('Customer is required. Select a customer or check Guest Mode.');
+      return;
+    }
     const validItems = items.filter(i => Number(i.product_id) > 0);
     if (validItems.length === 0) { toast.error('Add at least one item'); return; }
-    const customer = customers.find(c => c.id === data.customer_id);
+    const customer = isGuestMode ? null : customers.find(c => c.id === data.customer_id);
 
     const vTotals = validItems.reduce((acc, item) => ({
       subtotal: acc.subtotal + (Number(item.quantity) || 0) * (Number(item.rate) || 0),
@@ -215,11 +226,14 @@ export function InvoiceNewPage() {
 
     createMutation.mutate({
       store_id: resolvedStoreId,
-      customer_id: data.customer_id,
+      customer_id: isGuestMode ? undefined : data.customer_id,
+      is_guest: isGuestMode,
+      guest_name: isGuestMode ? data.guest_name : undefined,
+      guest_mobile: isGuestMode ? data.guest_mobile : undefined,
       invoice_date: data.invoice_date,
-      customer_name_snapshot: customer?.name,
-      customer_mobile_snapshot: customer?.mobile,
-      customer_gst_snapshot: customer?.gst_number,
+      customer_name_snapshot: isGuestMode ? (data.guest_name || 'Walk-in Customer') : customer?.name,
+      customer_mobile_snapshot: isGuestMode ? (data.guest_mobile || '0000000000') : customer?.mobile,
+      customer_gst_snapshot: isGuestMode ? undefined : customer?.gst_number,
       remarks: data.remarks || undefined,
       auto_confirm: autoConfirm,
       subtotal: Math.round(vTotals.subtotal * 100) / 100,
@@ -232,6 +246,7 @@ export function InvoiceNewPage() {
       total_amount: Math.round(vTotals.total * 100) / 100,
       items: validItems.map(item => ({
         product_id: item.product_id,
+        product_name_snapshot: item.product_name_snapshot || undefined,
         unit_id: item.unit_id ? Number(item.unit_id) : null,
         quantity: Number(item.quantity) || 0,
         rate: Number(item.rate) || 0,
@@ -263,24 +278,66 @@ export function InvoiceNewPage() {
               <User className="w-4 h-4 text-blue-600" />
             </div>
             <h2 className="text-base font-semibold text-neutral-900 flex-1">Customer & Invoice Info</h2>
-            <button type="button" onClick={() => setShowQuickAdd(true)} className="btn-primary text-xs py-1.5 px-3 gap-1.5">
-              <UserPlus className="w-3.5 h-3.5" /> New Customer
-            </button>
+            
+            <label className="flex items-center gap-2 text-sm text-neutral-600 cursor-pointer bg-neutral-50 border border-neutral-200 px-3 py-1.5 rounded-lg hover:bg-neutral-100 transition-colors mr-2">
+              <input
+                type="checkbox"
+                checked={isGuestMode}
+                onChange={(e) => {
+                  setIsGuestMode(e.target.checked);
+                  if (e.target.checked) {
+                    setValue('customer_id', 0);
+                    setSelectedCustomer(null);
+                  }
+                }}
+                className="rounded border-neutral-300 text-primary-600 focus:ring-primary-500 w-4 h-4"
+              />
+              <span>Guest Mode (Walk-in)</span>
+            </label>
+
+            {!isGuestMode && (
+              <button type="button" onClick={() => setShowQuickAdd(true)} className="btn-primary text-xs py-1.5 px-3 gap-1.5">
+                <UserPlus className="w-3.5 h-3.5" /> New Customer
+              </button>
+            )}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="label">Customer <span className="text-red-500">*</span></label>
-              <SearchableSelect
-                options={customers.map(c => ({ value: c.id, label: c.name, sub: c.mobile || '' }))}
-                value={watch('customer_id') || ''}
-                onChange={(val) => {
-                  const id = Number(val); setValue('customer_id', id);
-                  setSelectedCustomer(customers.find(c => c.id === id) || null);
-                }}
-                placeholder="Search & select customer..."
-                error={errors.customer_id?.message}
-              />
-            </div>
+            {isGuestMode ? (
+              <>
+                <div>
+                  <label className="label">Customer Name (Guest)</label>
+                  <input
+                    type="text"
+                    className="input-field w-full"
+                    placeholder="Walk-in Customer"
+                    {...register('guest_name')}
+                  />
+                </div>
+                <div>
+                  <label className="label">Mobile Number</label>
+                  <input
+                    type="text"
+                    className="input-field w-full"
+                    placeholder="0000000000"
+                    {...register('guest_mobile')}
+                  />
+                </div>
+              </>
+            ) : (
+              <div>
+                <label className="label">Customer <span className="text-red-500">*</span></label>
+                <SearchableSelect
+                  options={customers.map(c => ({ value: c.id, label: c.name, sub: c.mobile || '' }))}
+                  value={watch('customer_id') || ''}
+                  onChange={(val) => {
+                    const id = Number(val); setValue('customer_id', id);
+                    setSelectedCustomer(customers.find(c => c.id === id) || null);
+                  }}
+                  placeholder="Search & select customer..."
+                  error={errors.customer_id?.message}
+                />
+              </div>
+            )}
             <div>
               <DatePicker
                 label="Invoice Date *"
@@ -346,6 +403,14 @@ export function InvoiceNewPage() {
                       ? allowedUnits.map((u: any) => ({ value: u.id, label: u.short_name }))
                       : (product?.unit ? [{ value: product.unit.id, label: product.unit.short_name }] : []);
 
+                    const categoryName = category?.name?.toLowerCase() || '';
+                    const isService = categoryName && (
+                      categoryName.includes('service') ||
+                      categoryName.includes('charge') ||
+                      categoryName.includes('extra') ||
+                      categoryName.includes('other')
+                    );
+
                     return (
                       <tr key={idx} className="border-b border-neutral-100 hover:bg-neutral-50">
                         <td className="py-3 px-2 text-neutral-400 align-middle">{idx + 1}</td>
@@ -357,6 +422,15 @@ export function InvoiceNewPage() {
                             onChange={(val) => updateItem(idx, 'product_id', Number(val))}
                             placeholder="Select..."
                           />
+                          {isService && (
+                            <input
+                              type="text"
+                              className="input-field w-full text-xs mt-1.5 !py-1 !px-2"
+                              value={item.product_name_snapshot || ''}
+                              onChange={(e) => updateItem(idx, 'product_name_snapshot', e.target.value)}
+                              placeholder="Enter custom description..."
+                            />
+                          )}
                         </td>
                         <td className="py-3 px-2 align-middle">
                           <Select

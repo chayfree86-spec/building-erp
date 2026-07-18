@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Receipt, ShoppingCart, Package, Users, Truck, CreditCard,
   RotateCcw, ArrowRightLeft, BarChart3, Shield, FileText, Settings,
-  ChevronLeft, ChevronRight, Boxes
+  ChevronLeft, ChevronRight, Boxes, ChevronDown
 } from 'lucide-react';
 import { useAuth } from '@/features/auth/auth-context';
 
@@ -54,6 +54,26 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const location = useLocation();
   const { user } = useAuth();
 
+  const [expandedMenus, setExpandedMenus] = React.useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    navItems.forEach(item => {
+      if (item.children) {
+        const hasActiveChild = item.children.some(child => location.pathname === child.path || location.pathname.startsWith(child.path + '/'));
+        if (hasActiveChild) {
+          initial[item.label] = true;
+        }
+      }
+    });
+    return initial;
+  });
+
+  const toggleMenu = (label: string) => {
+    setExpandedMenus(prev => ({
+      ...prev,
+      [label]: !prev[label]
+    }));
+  };
+
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
 
   const NavContent = () => (
@@ -69,19 +89,26 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         {navItems.map((item) => {
           const active = isActive(item.path);
           if (item.children && item.children.length > 0) {
+            const isExpanded = !!expandedMenus[item.label];
             return (
-              <div key={item.path}>
-                <NavLink
-                  to={item.path}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group ${
+              <div key={item.path} className="space-y-0.5">
+                <button
+                  type="button"
+                  onClick={() => toggleMenu(item.label)}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group ${
                     active ? 'bg-primary-50 text-primary-700' : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
                   }`}
                 >
-                  <item.icon className={`w-5 h-5 shrink-0 ${active ? 'text-primary-600' : 'text-neutral-400 group-hover:text-neutral-600'}`} />
-                  {!collapsed && <span className="whitespace-nowrap">{item.label}</span>}
-                </NavLink>
-                {!collapsed && (
-                  <div className="ml-4 mt-0.5 space-y-0.5 border-l border-neutral-100">
+                  <div className="flex items-center gap-3">
+                    <item.icon className={`w-5 h-5 shrink-0 ${active ? 'text-primary-600' : 'text-neutral-400 group-hover:text-neutral-600'}`} />
+                    {!collapsed && <span className="whitespace-nowrap">{item.label}</span>}
+                  </div>
+                  {!collapsed && (
+                    <ChevronDown className={`w-4 h-4 text-neutral-400 group-hover:text-neutral-600 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                  )}
+                </button>
+                {!collapsed && isExpanded && (
+                  <div className="ml-4 mt-0.5 space-y-0.5 border-l border-neutral-100 pl-2">
                     {item.children.map((child) => {
                       const childActive = isActive(child.path);
                       return (
@@ -92,7 +119,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                             childActive ? 'text-primary-700 font-medium bg-primary-50/50' : 'text-neutral-500 hover:text-neutral-700 hover:bg-neutral-50'
                           }`}
                         >
-                          {!collapsed && <span className="whitespace-nowrap">{child.label}</span>}
+                          <span className="whitespace-nowrap">{child.label}</span>
                         </NavLink>
                       );
                     })}

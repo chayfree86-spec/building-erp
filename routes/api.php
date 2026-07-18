@@ -112,6 +112,7 @@ Route::prefix('v1')->group(function () {
         Route::get('reports/supplier-outstanding', [V1\ReportController::class, 'supplierOutstanding']);
         Route::get('reports/low-stock', [V1\ReportController::class, 'lowStock']);
         Route::get('reports/daily-sales', [V1\ReportController::class, 'dailySales']);
+        Route::get('reports/global-search', [V1\ReportController::class, 'globalSearch']);
 
         // Audit Logs
         Route::get('audit-logs', [V1\AuditLogController::class, 'index']);

@@ -5,7 +5,7 @@ import { ArrowLeft, Loader2, Building2, Calendar, IndianRupee, User, CreditCard,
 import toast from 'react-hot-toast';
 import { Select } from '@/components/ui/Select';
 import { salesApi, paymentsApi, productsApi } from '@/services/api-endpoints';
-import { formatCurrency, formatDate } from '@/utils/format';
+import { formatCurrency, formatDate, getLocalDateString } from '@/utils/format';
 
 export function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -74,7 +74,7 @@ export function InvoiceDetailPage() {
 
   const enterEditMode = () => {
     setEditedItems((invoice.items || []).map((i: any) => ({
-      id: i.id, product_id: i.product_id, product: i.product,
+      id: i.id, product_id: i.product_id, product: i.product, product_name_snapshot: i.product_name_snapshot || i.product?.name || '',
       quantity: Number(i.quantity), rate: Number(i.rate),
       discount_amount: Number(i.discount_amount || 0), gst_rate: Number(i.gst_rate || 0),
       taxable_amount: Number(i.taxable_amount || 0), tax_amount: Number(i.tax_amount || 0),
@@ -84,7 +84,7 @@ export function InvoiceDetailPage() {
   };
 
   const addItemToEdit = () => {
-    setEditedItems(prev => [...prev, { id: 0, product_id: 0, product: null, quantity: 1, rate: 0, discount_amount: 0, gst_rate: 0, taxable_amount: 0, tax_amount: 0, line_total: 0 }]);
+    setEditedItems(prev => [...prev, { id: 0, product_id: 0, product: null, product_name_snapshot: '', quantity: 1, rate: 0, discount_amount: 0, gst_rate: 0, taxable_amount: 0, tax_amount: 0, line_total: 0 }]);
   };
 
   const removeEditItem = (idx: number) => {
@@ -94,15 +94,25 @@ export function InvoiceDetailPage() {
   const editItem = (idx: number, field: string, val: any) => {
     setEditedItems(prev => {
       const updated = [...prev];
-      updated[idx] = { ...updated[idx], [field]: field === 'product_id' ? Number(val) : Number(val) || 0 };
+      updated[idx] = { 
+        ...updated[idx], 
+        [field]: field === 'product_name_snapshot' ? String(val) : (field === 'product_id' ? Number(val) : Number(val) || 0) 
+      };
       const item = updated[idx];
+      if (field === 'product_id') {
+        const prod = products.find(p => p.id === Number(val));
+        if (prod) {
+          item.product_name_snapshot = prod.name;
+          item.gst_rate = Number((prod as any).gst_rate?.rate) || 0;
+        }
+      }
       const lineGross = item.quantity * item.rate;
       const taxable = lineGross - item.discount_amount;
       const tax = (taxable * item.gst_rate) / 100;
       updated[idx] = { ...item, taxable_amount: Math.round(taxable * 100) / 100, tax_amount: Math.round(tax * 100) / 100, line_total: Math.round((taxable + tax) * 100) / 100 };
       // Auto-add new row after selecting a product in the last row
       if (field === 'product_id' && Number(val) > 0 && idx === prev.length - 1) {
-        updated.push({ id: 0, product_id: 0, product: null, quantity: 1, rate: 0, discount_amount: 0, gst_rate: 0, taxable_amount: 0, tax_amount: 0, line_total: 0 });
+        updated.push({ id: 0, product_id: 0, product: null, product_name_snapshot: '', quantity: 1, rate: 0, discount_amount: 0, gst_rate: 0, taxable_amount: 0, tax_amount: 0, line_total: 0 });
       }
       return updated;
     });
@@ -128,7 +138,7 @@ export function InvoiceDetailPage() {
       tax_amount: Math.round(t.tax * 100) / 100,
       total_amount: Math.round(t.total * 100) / 100,
       items: editedItems.map(i => ({
-        id: i.id, product_id: i.product_id, quantity: Number(i.quantity) || 0,
+        id: i.id, product_id: i.product_id, product_name_snapshot: i.product_name_snapshot || undefined, quantity: Number(i.quantity) || 0,
         rate: Number(i.rate) || 0, discount_amount: Number(i.discount_amount) || 0,
         gst_rate: Number(i.gst_rate) || 0, taxable_amount: Number(i.taxable_amount) || 0,
         tax_amount: Number(i.tax_amount) || 0, line_total: Number(i.line_total) || 0,
@@ -145,7 +155,7 @@ export function InvoiceDetailPage() {
       await paymentsApi.customerCreate({
         store_id: invoice.store_id,
         customer_id: invoice.customer_id,
-        payment_date: new Date().toISOString().split('T')[0],
+        payment_date: getLocalDateString(),
         payment_mode_id: payMode,
         amount: amt,
         transaction_reference: payRef || undefined,
@@ -248,14 +258,35 @@ export function InvoiceDetailPage() {
               </tr>
             </thead>
             <tbody>
-              {items.map((item: any, idx: number) => (
-                <tr key={item.id || idx} className="border-b border-neutral-100">
-                  <td className="py-3 px-2 text-neutral-400 align-middle">{idx + 1}</td>
-                  <td className="py-3 px-2 font-medium align-middle overflow-visible">
-                    {editMode ? (
-                      <Select compact options={products.map((p: any) => ({ value: p.id, label: p.name }))} value={item.product_id || ''} onChange={(val) => editItem(idx, 'product_id', Number(val))} placeholder="Select product..." />
-                    ) : (item.product?.name || `Product #${item.product_id}`)}
-                  </td>
+              {items.map((item: any, idx: number) => {
+                const productObj = products.find((p: any) => p.id === Number(item.product_id));
+                const categoryName = productObj?.category?.name?.toLowerCase() || item.product?.category?.name?.toLowerCase() || '';
+                const isService = categoryName && (
+                  categoryName.includes('service') ||
+                  categoryName.includes('charge') ||
+                  categoryName.includes('extra') ||
+                  categoryName.includes('other')
+                );
+
+                return (
+                  <tr key={item.id || idx} className="border-b border-neutral-100">
+                    <td className="py-3 px-2 text-neutral-400 align-middle">{idx + 1}</td>
+                    <td className="py-3 px-2 font-medium align-middle overflow-visible">
+                      {editMode ? (
+                        <>
+                          <Select compact options={products.map((p: any) => ({ value: p.id, label: p.name }))} value={item.product_id || ''} onChange={(val) => editItem(idx, 'product_id', Number(val))} placeholder="Select product..." />
+                          {isService && (
+                            <input
+                              type="text"
+                              className="input-field w-full text-xs mt-1.5 !py-1 !px-2"
+                              value={item.product_name_snapshot || ''}
+                              onChange={(e) => editItem(idx, 'product_name_snapshot', e.target.value)}
+                              placeholder="Enter custom description..."
+                            />
+                          )}
+                        </>
+                      ) : (item.product_name_snapshot || item.product?.name || `Product #${item.product_id}`)}
+                    </td>
                   <td className="py-3 px-2 text-right align-middle">
                     {editMode ? (
                       <input type="number" className="input-field w-20 text-right text-sm !py-1 !px-1.5" min="0.001" step="0.001" value={item.quantity || ''} onChange={e => editItem(idx, 'quantity', e.target.value)} onFocus={(e) => e.target.select()} />
@@ -279,8 +310,8 @@ export function InvoiceDetailPage() {
                       <button type="button" onClick={() => removeEditItem(idx)} className="p-1 text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
                     </td>
                   )}
-                </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

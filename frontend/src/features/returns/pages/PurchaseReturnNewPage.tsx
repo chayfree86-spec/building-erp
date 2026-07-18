@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { returnsApi, purchasesApi, productsApi } from '@/services/api-endpoints';
 import { useAuth } from '@/features/auth/auth-context';
 import { handleFormKeyDown } from '@/utils/formNavigation';
+import { getLocalDateString } from '@/utils/format';
 import type { Product } from '@/types';
 
 const itemSchema = z.object({
@@ -38,7 +39,7 @@ export function PurchaseReturnNewPage() {
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(formSchema),
-    defaultValues: { purchase_id: 0, supplier_id: 0, return_date: new Date().toISOString().split('T')[0], remarks: '' },
+    defaultValues: { purchase_id: 0, supplier_id: 0, return_date: getLocalDateString(), remarks: '' },
   });
 
   const [items, setItems] = useState<any[]>([]);

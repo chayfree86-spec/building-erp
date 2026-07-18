@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { adjustmentsApi, productsApi, stockApi } from '@/services/api-endpoints';
 import { useAuth } from '@/features/auth/auth-context';
 import { handleFormKeyDown } from '@/utils/formNavigation';
+import { getLocalDateString } from '@/utils/format';
 import type { Product } from '@/types';
 
 // ─── Schema ───
@@ -50,7 +51,7 @@ export function StockAdjustmentNewPage() {
   const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      adjustment_date: new Date().toISOString().split('T')[0],
+      adjustment_date: getLocalDateString(),
       type: 'addition',
       reason: '',
     },

@@ -56,7 +56,7 @@ class ReportController extends Controller
             $query->whereDate('invoice_date', '<=', $request->date_to);
         }
 
-        $invoices = $query->where('status', 'confirmed')->get();
+        $invoices = $query->whereIn('status', ['confirmed', 'partially_paid', 'paid'])->get();
 
         $summary = [
             'total_invoices' => $invoices->count(),
@@ -87,7 +87,7 @@ class ReportController extends Controller
             $query->whereDate('purchase_date', '<=', $request->date_to);
         }
 
-        $purchases = $query->where('status', 'confirmed')->get();
+        $purchases = $query->whereIn('status', ['confirmed', 'partially_paid', 'paid'])->get();
 
         $summary = [
             'total_purchases' => $purchases->count(),
@@ -108,7 +108,7 @@ class ReportController extends Controller
     {
         $storeId = $request->header('X-Store-Id');
 
-        $salesTotal = SalesInvoice::where('status', 'confirmed')
+        $salesTotal = SalesInvoice::whereIn('status', ['confirmed', 'partially_paid', 'paid'])
             ->when($storeId, fn($q) => $q->where('store_id', $storeId))
             ->when($request->date_from, fn($q) => $q->whereDate('invoice_date', '>=', $request->date_from))
             ->when($request->date_to, fn($q) => $q->whereDate('invoice_date', '<=', $request->date_to))
@@ -116,7 +116,7 @@ class ReportController extends Controller
 
         $costTotal = DB::table('sales_batch_allocations')
             ->join('sales_invoices', 'sales_batch_allocations.invoice_id', '=', 'sales_invoices.id')
-            ->where('sales_invoices.status', 'confirmed')
+            ->whereIn('sales_invoices.status', ['confirmed', 'partially_paid', 'paid'])
             ->when($storeId, fn($q) => $q->where('sales_batch_allocations.store_id', $storeId))
             ->when($request->date_from, fn($q) => $q->whereDate('sales_invoices.invoice_date', '>=', $request->date_from))
             ->when($request->date_to, fn($q) => $q->whereDate('sales_invoices.invoice_date', '<=', $request->date_to))
@@ -142,7 +142,7 @@ class ReportController extends Controller
         $storeId = $request->header('X-Store-Id');
 
         // Output GST (sales)
-        $outputGst = SalesInvoice::where('status', 'confirmed')
+        $outputGst = SalesInvoice::whereIn('status', ['confirmed', 'partially_paid', 'paid'])
             ->when($storeId, fn($q) => $q->where('store_id', $storeId))
             ->when($request->date_from, fn($q) => $q->whereDate('invoice_date', '>=', $request->date_from))
             ->when($request->date_to, fn($q) => $q->whereDate('invoice_date', '<=', $request->date_to))
@@ -150,7 +150,7 @@ class ReportController extends Controller
             ->first();
 
         // Input GST (purchases)
-        $inputGst = Purchase::where('status', 'confirmed')
+        $inputGst = Purchase::whereIn('status', ['confirmed', 'partially_paid', 'paid'])
             ->when($storeId, fn($q) => $q->where('store_id', $storeId))
             ->when($request->date_from, fn($q) => $q->whereDate('purchase_date', '>=', $request->date_from))
             ->when($request->date_to, fn($q) => $q->whereDate('purchase_date', '<=', $request->date_to))
@@ -286,7 +286,7 @@ class ReportController extends Controller
         $date = $request->date ?? now()->toDateString();
 
         $invoices = SalesInvoice::with(['customer', 'items.product', 'batchAllocations'])
-            ->where('status', 'confirmed')
+            ->whereIn('status', ['confirmed', 'partially_paid', 'paid'])
             ->whereDate('invoice_date', $date)
             ->when($storeId, fn($q) => $q->where('store_id', $storeId))
             ->get();
@@ -304,6 +304,84 @@ class ReportController extends Controller
             'success' => true, 'message' => 'Daily sales report.',
             'data' => ['invoices' => $invoices, 'summary' => $summary],
             'errors' => null,
+        ]);
+    }
+
+    public function globalSearch(Request $request): JsonResponse
+    {
+        $query = $request->query('query');
+        if (strlen($query) < 2) {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'products' => [],
+                    'customers' => [],
+                    'suppliers' => [],
+                    'invoices' => [],
+                    'purchases' => [],
+                ]
+            ]);
+        }
+
+        $storeId = $request->header('X-Store-Id');
+
+        // 1. Products
+        $products = \App\Models\Product::where('status', 'active')
+            ->where(function($q) use ($query) {
+                $q->where('name', 'like', "%{$query}%")
+                  ->orWhere('sku', 'like', "%{$query}%");
+            })
+            ->limit(5)
+            ->get();
+
+        // 2. Customers
+        $customers = \App\Models\Customer::where('status', 'active')
+            ->where(function($q) use ($query) {
+                $q->where('name', 'like', "%{$query}%")
+                  ->orWhere('mobile', 'like', "%{$query}%");
+            })
+            ->limit(5)
+            ->get();
+
+        // 3. Suppliers
+        $suppliers = \App\Models\Supplier::where('status', 'active')
+            ->where(function($q) use ($query) {
+                $q->where('name', 'like', "%{$query}%")
+                  ->orWhere('mobile', 'like', "%{$query}%");
+            })
+            ->limit(5)
+            ->get();
+
+        // 4. Invoices
+        $invoices = \App\Models\SalesInvoice::with('customer')
+            ->when($storeId, fn($q) => $q->where('store_id', $storeId))
+            ->where(function($q) use ($query) {
+                $q->where('invoice_number', 'like', "%{$query}%")
+                  ->orWhere('customer_name_snapshot', 'like', "%{$query}%")
+                  ->orWhere('customer_mobile_snapshot', 'like', "%{$query}%");
+            })
+            ->limit(5)
+            ->get();
+
+        // 5. Purchases
+        $purchases = \App\Models\Purchase::with('supplier')
+            ->when($storeId, fn($q) => $q->where('store_id', $storeId))
+            ->where(function($q) use ($query) {
+                $q->where('purchase_number', 'like', "%{$query}%")
+                  ->orWhere('supplier_invoice_number', 'like', "%{$query}%");
+            })
+            ->limit(5)
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'products' => $products,
+                'customers' => $customers,
+                'suppliers' => $suppliers,
+                'invoices' => $invoices,
+                'purchases' => $purchases,
+            ]
         ]);
     }
 }

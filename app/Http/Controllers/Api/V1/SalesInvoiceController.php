@@ -43,6 +43,27 @@ class SalesInvoiceController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        if ($request->input('is_guest') || !$request->input('customer_id')) {
+            $guestCustomer = \App\Models\Customer::firstOrCreate(
+                ['mobile' => '0000000000'],
+                [
+                    'name' => 'Walk-in Customer',
+                    'normalized_mobile' => '0000000000',
+                    'opening_balance' => 0,
+                    'opening_balance_type' => 'credit',
+                    'credit_limit' => 0,
+                    'status' => 'active',
+                ]
+            );
+            $request->merge(['customer_id' => $guestCustomer->id]);
+            if (!$request->input('customer_name_snapshot')) {
+                $request->merge(['customer_name_snapshot' => $request->input('guest_name') ?: 'Walk-in Customer']);
+            }
+            if (!$request->input('customer_mobile_snapshot')) {
+                $request->merge(['customer_mobile_snapshot' => $request->input('guest_mobile') ?: '0000000000']);
+            }
+        }
+
         $validator = Validator::make($request->all(), [
             'store_id' => 'required|exists:stores,id',
             'customer_id' => 'required|exists:customers,id',
@@ -64,6 +85,7 @@ class SalesInvoiceController extends Controller
             'remarks' => 'nullable|string',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
+            'items.*.product_name_snapshot' => 'nullable|string|max:200',
             'items.*.unit_id' => 'nullable|exists:units,id',
             'items.*.quantity' => 'required|numeric|min:0.001',
             'items.*.rate' => 'required|numeric|min:0',
@@ -112,10 +134,14 @@ class SalesInvoiceController extends Controller
         ]);
 
         foreach ($request->items as $item) {
+            $product = \App\Models\Product::find($item['product_id']);
+            $unit = (isset($item['unit_id']) && $item['unit_id']) ? \App\Models\Unit::find($item['unit_id']) : ($product?->unit);
             SalesInvoiceItem::create([
                 'invoice_id' => $invoice->id,
                 'product_id' => $item['product_id'],
+                'product_name_snapshot' => $item['product_name_snapshot'] ?? $product?->name,
                 'unit_id' => $item['unit_id'] ?? null,
+                'unit_name_snapshot' => $item['unit_name_snapshot'] ?? $unit?->short_name,
                 'quantity' => $item['quantity'],
                 'rate' => $item['rate'],
                 'discount_amount' => $item['discount_amount'] ?? 0,
@@ -163,9 +189,31 @@ class SalesInvoiceController extends Controller
     {
         $invoice = SalesInvoice::findOrFail($id);
 
-        // Allow editing any invoice (draft or confirmed)
+        if ($request->input('is_guest')) {
+            $guestCustomer = \App\Models\Customer::firstOrCreate(
+                ['mobile' => '0000000000'],
+                [
+                    'name' => 'Walk-in Customer',
+                    'normalized_mobile' => '0000000000',
+                    'opening_balance' => 0,
+                    'opening_balance_type' => 'credit',
+                    'credit_limit' => 0,
+                    'status' => 'active',
+                ]
+            );
+            $request->merge(['customer_id' => $guestCustomer->id]);
+            if (!$request->input('customer_name_snapshot')) {
+                $request->merge(['customer_name_snapshot' => $request->input('guest_name') ?: 'Walk-in Customer']);
+            }
+            if (!$request->input('customer_mobile_snapshot')) {
+                $request->merge(['customer_mobile_snapshot' => $request->input('guest_mobile') ?: '0000000000']);
+            }
+        }
 
         $invoice->update($request->validate([
+            'customer_id' => 'sometimes|exists:customers,id',
+            'customer_name_snapshot' => 'nullable|string|max:200',
+            'customer_mobile_snapshot' => 'nullable|string|max:15',
             'invoice_date' => 'sometimes|date',
             'subtotal' => 'sometimes|numeric|min:0',
             'item_discount' => 'sometimes|numeric|min:0',
@@ -185,10 +233,39 @@ class SalesInvoiceController extends Controller
         }
 
         if ($request->has('items')) {
-            $invoice->items()->delete();
-            foreach ($request->items as $item) {
-                SalesInvoiceItem::create(array_merge($item, ['invoice_id' => $invoice->id]));
+            $existingItemIds = [];
+            foreach ($request->items as $itemData) {
+                $product = \App\Models\Product::find($itemData['product_id']);
+                $unit = (isset($itemData['unit_id']) && $itemData['unit_id']) ? \App\Models\Unit::find($itemData['unit_id']) : ($product?->unit);
+                
+                $itemPayload = [
+                    'product_id' => $itemData['product_id'],
+                    'product_name_snapshot' => $itemData['product_name_snapshot'] ?? $product?->name,
+                    'unit_id' => $itemData['unit_id'] ?? null,
+                    'unit_name_snapshot' => $itemData['unit_name_snapshot'] ?? $unit?->short_name,
+                    'quantity' => $itemData['quantity'],
+                    'rate' => $itemData['rate'],
+                    'discount_amount' => $itemData['discount_amount'] ?? 0,
+                    'overall_discount_share' => $itemData['overall_discount_share'] ?? 0,
+                    'taxable_amount' => $itemData['taxable_amount'] ?? 0,
+                    'gst_rate' => $itemData['gst_rate'] ?? 0,
+                    'tax_amount' => $itemData['tax_amount'] ?? 0,
+                    'line_total' => $itemData['line_total'],
+                ];
+
+                if (isset($itemData['id']) && $itemData['id'] > 0) {
+                    $item = $invoice->items()->find($itemData['id']);
+                    if ($item) {
+                        $item->update($itemPayload);
+                        $existingItemIds[] = $item->id;
+                    }
+                } else {
+                    $newItem = $invoice->items()->create($itemPayload);
+                    $existingItemIds[] = $newItem->id;
+                }
             }
+            // Delete items not in the list
+            $invoice->items()->whereNotIn('id', $existingItemIds)->delete();
         }
 
         return response()->json([
