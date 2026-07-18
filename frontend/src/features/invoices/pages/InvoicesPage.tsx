@@ -9,10 +9,10 @@ import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { Button } from '@/components/ui/Button';
 import { useInvoices } from '@/features/purchases/api/queries';
 import { formatCurrency, formatDate } from '@/utils/format';
-import { Search, RotateCcw, Receipt, Eye, X, Pencil, Trash2 } from 'lucide-react';
+import { Search, RotateCcw, Receipt, Eye, X, Pencil, Trash2, CreditCard, Check, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { salesApi } from '@/services/api-endpoints';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ConfirmDialog } from '@/components/ui/Modal';
 
 const statusOptions = [
@@ -29,6 +29,18 @@ export function InvoicesPage() {
   const [status, setStatus] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ type: 'cancel' | 'delete'; id: number } | null>(null);
+
+  const confirmMutation = useMutation({
+    mutationFn: (id: number) => salesApi.confirm(id),
+    onSuccess: () => {
+      toast.success('Invoice confirmed successfully!');
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['stock'] });
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Failed to confirm invoice');
+    }
+  });
 
   const { data, isLoading, isError, refetch } = useInvoices({ search: search || undefined, status: status || undefined });
   const invoices = (data as any)?.items || [];
@@ -67,7 +79,7 @@ export function InvoicesPage() {
           columns={[
             { key: 'invoice_no', header: 'Invoice #', render: (inv: any) => (
               <div>
-                <p className="font-medium text-neutral-900">{inv.invoice_no}</p>
+                <p className="font-medium text-neutral-900">{inv.invoice_number}</p>
                 <p className="text-xs text-neutral-500">{formatDate(inv.invoice_date)}</p>
               </div>
             )},
@@ -88,15 +100,35 @@ export function InvoicesPage() {
               </div>
             );}},
             { key: 'status', header: 'Status', render: (inv: any) => <StatusBadge status={inv.status} /> },
-            { key: 'actions', header: 'Actions', className: 'text-right w-28', render: (inv: any) => (
-              <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
-                <Button size="sm" variant="ghost" onClick={() => navigate(`/invoices/${inv.id}`)} title="Edit"><Pencil className="w-4 h-4 text-blue-500" /></Button>
-                <Button size="sm" variant="ghost" onClick={() => triggerConfirm('delete', inv.id)} title="Delete"><Trash2 className="w-4 h-4 text-red-500" /></Button>
-                {inv.status === 'draft' && (
-                  <Button size="sm" variant="ghost" onClick={() => triggerConfirm('cancel', inv.id)} title="Cancel"><X className="w-4 h-4 text-neutral-400" /></Button>
-                )}
-              </div>
-            )},
+            { key: 'actions', header: 'Actions', className: 'text-right w-36', render: (inv: any) => {
+              const hasBalance = (Number(inv.total_amount) - Number(inv.paid_amount || 0)) > 0.01;
+              const isConfirmed = ['confirmed', 'partially_paid'].includes(inv.status);
+              return (
+                <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
+                  {isConfirmed && hasBalance && (
+                    <Button size="sm" variant="ghost" onClick={() => navigate(`/customer-payments/new?customer=${inv.customer_id}&invoice=${inv.id}`)} title="Record Payment"><CreditCard className="w-4 h-4 text-emerald-500" /></Button>
+                  )}
+                  {inv.status === 'draft' && (
+                    <Button size="sm" variant="ghost" onClick={() => confirmMutation.mutate(inv.id)} disabled={confirmMutation.isPending} title="Confirm Invoice">
+                      {confirmMutation.isPending && confirmMutation.variables === inv.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+                      ) : (
+                        <Check className="w-4 h-4 text-emerald-500" />
+                      )}
+                    </Button>
+                  )}
+                  <Button size="sm" variant="ghost" onClick={() => navigate(`/invoices/${inv.id}`)} title="View/Edit"><Eye className="w-4 h-4 text-blue-500" /></Button>
+                  {inv.status === 'draft' ? (
+                    <>
+                      <Button size="sm" variant="ghost" onClick={() => triggerConfirm('delete', inv.id)} title="Delete"><Trash2 className="w-4 h-4 text-red-500" /></Button>
+                      <Button size="sm" variant="ghost" onClick={() => triggerConfirm('cancel', inv.id)} title="Cancel"><X className="w-4 h-4 text-neutral-400" /></Button>
+                    </>
+                  ) : (
+                    <Button size="sm" variant="ghost" disabled title="Delete"><Trash2 className="w-4 h-4 text-neutral-300 cursor-not-allowed" /></Button>
+                  )}
+                </div>
+              );
+            }},
           ]}
         />
       )}

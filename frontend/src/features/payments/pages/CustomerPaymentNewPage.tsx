@@ -85,17 +85,30 @@ export function CustomerPaymentNewPage() {
 
   useEffect(() => {
     if (outstandingInvoices.length > 0) {
-      setAllocations(outstandingInvoices.map((inv: any) => ({
-        invoice_id: inv.id,
-        invoice_number: inv.invoice_number,
-        invoice_date: inv.invoice_date,
-        total_amount: Number(inv.total_amount) || 0,
-        paid_amount: Number(inv.paid_amount) || 0,
-        balance: (Number(inv.total_amount) || 0) - (Number(inv.paid_amount) || 0),
-        allocated: 0,
-      })));
+      const targetInvoiceId = Number(searchParams.get('invoice'));
+      setAllocations(outstandingInvoices.map((inv: any) => {
+        const balance = (Number(inv.total_amount) || 0) - (Number(inv.paid_amount) || 0);
+        const isTarget = targetInvoiceId && inv.id === targetInvoiceId;
+        return {
+          invoice_id: inv.id,
+          invoice_number: inv.invoice_number,
+          invoice_date: inv.invoice_date,
+          total_amount: Number(inv.total_amount) || 0,
+          paid_amount: Number(inv.paid_amount) || 0,
+          balance: balance,
+          allocated: isTarget ? balance : 0,
+        };
+      }));
+      if (targetInvoiceId) {
+        const inv = outstandingInvoices.find(i => i.id === targetInvoiceId);
+        if (inv) {
+          const balance = (Number(inv.total_amount) || 0) - (Number(inv.paid_amount) || 0);
+          setValue('amount', balance);
+          setAllocationMode(true);
+        }
+      }
     }
-  }, [outstandingInvoices]);
+  }, [outstandingInvoices, searchParams, setValue]);
 
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
@@ -106,11 +119,11 @@ export function CustomerPaymentNewPage() {
   }, [customerId, customers]);
 
   useEffect(() => {
-    if (selectedCustomer) {
+    if (selectedCustomer && !searchParams.get('invoice')) {
       const outBal = Number(selectedCustomer.outstanding_balance) || 0;
       setValue('amount', outBal > 0 ? outBal : 0);
     }
-  }, [selectedCustomer, setValue]);
+  }, [selectedCustomer, setValue, searchParams]);
 
   const defaultAmount = selectedCustomer ? Math.max(0, Number(selectedCustomer.outstanding_balance) || 0) : 0;
   const isMatchingDefault = Number(paymentAmount) === defaultAmount && defaultAmount > 0;

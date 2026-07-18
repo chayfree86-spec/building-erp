@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Loader2, Building2, Calendar, IndianRupee, User, CreditCard, Pencil, Save, X, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Building2, Calendar, IndianRupee, User, CreditCard, Pencil, Save, X, Plus, Trash2, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Select } from '@/components/ui/Select';
 import { salesApi, paymentsApi, productsApi } from '@/services/api-endpoints';
@@ -44,6 +44,18 @@ export function InvoiceDetailPage() {
     mutationFn: (payload: any) => salesApi.update(Number(id), payload),
     onSuccess: () => { toast.success('Invoice updated!'); setEditMode(false); queryClient.invalidateQueries({ queryKey: ['invoices'] }); queryClient.invalidateQueries({ queryKey: ['stock'] }); },
     onError: (err: any) => { const e = err?.response?.data?.errors; toast.error(e ? String(Object.values(e)[0]) : 'Update failed'); },
+  });
+
+  const confirmMutation = useMutation({
+    mutationFn: (invoiceId: number) => salesApi.confirm(invoiceId),
+    onSuccess: () => {
+      toast.success('Invoice confirmed successfully!');
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['stock'] });
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Failed to confirm invoice');
+    }
   });
 
   if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 text-primary-600 animate-spin" /></div>;
@@ -167,7 +179,14 @@ export function InvoiceDetailPage() {
         </div>
         <div className="flex items-center gap-2">
           {!editMode && (
-            <button onClick={enterEditMode} className="btn btn-secondary text-sm"><Pencil className="w-4 h-4" /> Edit</button>
+            <>
+              {isDraft && (
+                <button onClick={() => confirmMutation.mutate(invoice.id)} disabled={confirmMutation.isPending} className="btn btn-success text-sm flex items-center gap-1.5">
+                  {confirmMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Confirm
+                </button>
+              )}
+              <button onClick={enterEditMode} className="btn btn-secondary text-sm"><Pencil className="w-4 h-4" /> Edit</button>
+            </>
           )}
           {editMode && (
             <>
@@ -178,9 +197,14 @@ export function InvoiceDetailPage() {
             </>
           )}
           {!isDraft && balance > 0 && (
-            <button onClick={() => { setPayAmount(String(balance)); setShowPayModal(true); }} className="btn btn-success text-sm">
-              <CreditCard className="w-4 h-4" /> Record Payment
-            </button>
+            <>
+              <button onClick={() => { setPayAmount(String(balance)); setShowPayModal(true); }} className="btn btn-ghost border border-emerald-200 text-emerald-600 hover:bg-emerald-50 text-sm flex items-center gap-1.5">
+                <CreditCard className="w-4 h-4" /> Quick Pay
+              </button>
+              <button onClick={() => navigate(`/customer-payments/new?customer=${invoice.customer_id}&invoice=${invoice.id}`)} className="btn btn-success text-sm flex items-center gap-1.5">
+                <CreditCard className="w-4 h-4" /> Record Payment
+              </button>
+            </>
           )}
         </div>
       </div>
