@@ -257,7 +257,7 @@ export function ReportsPage() {
               <div key={s.label} className="p-1 rounded-2xl bg-neutral-50 border border-neutral-200/60 shadow-sm transition-all duration-300 hover:shadow-md hover:border-neutral-300/80">
                 <div className="bg-white rounded-xl p-4 border border-white shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
                   <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">{s.label}</p>
-                  <p className={`text-xl font-bold mt-2 font-mono tabular-nums leading-none ${s.color || 'text-neutral-900'}`}>{s.value}</p>
+                  <p className={`text-xl font-bold mt-2 tabular-nums leading-none ${s.color || 'text-neutral-900'}`}>{s.value}</p>
                 </div>
               </div>
             ))}
@@ -281,8 +281,8 @@ export function ReportsPage() {
     <div className="space-y-6">
       <PageHeader title="Reports" description="Business intelligence and analytics — live from your data" />
 
-      {/* Horizontal Category Selector */}
-      <div className="bg-white border border-neutral-200 rounded-2xl p-2 flex flex-wrap gap-1.5 shadow-sm">
+      {/* Horizontal Category Selector with horizontal scrollbar hidden on mobile */}
+      <div className="bg-white border border-neutral-200 rounded-2xl p-2 flex md:flex-wrap gap-1.5 shadow-sm overflow-x-auto scrollbar-none snap-x">
         {REPORTS.map(rt => {
           const IconComponent = rt.icon;
           const active = reportType === rt.key;
@@ -292,7 +292,7 @@ export function ReportsPage() {
               key={rt.key}
               type="button"
               onClick={() => setReportType(rt.key)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${theme.tab}`}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 shrink-0 snap-align-start ${theme.tab}`}
             >
               <IconComponent className={`w-4 h-4 ${theme.icon}`} />
               <span>{rt.label}</span>
@@ -308,7 +308,9 @@ export function ReportsPage() {
             <h3 className="text-lg font-bold text-neutral-900">{config.label}</h3>
             <p className="text-xs text-neutral-400 mt-0.5">Filter results and export data</p>
           </div>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          
+          {/* Desktop Filters (Visible only on desktop md:flex) */}
+          <div className="hidden md:flex flex-row items-center gap-3">
             {config.filter === 'range' && (
               <div className="flex flex-col gap-1.5">
                 <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Date Range</span>
@@ -328,7 +330,7 @@ export function ReportsPage() {
               </div>
             )}
             <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold text-transparent select-none uppercase tracking-wider hidden sm:block">Action</span>
+              <span className="text-xs font-semibold text-transparent select-none uppercase tracking-wider">Action</span>
               <Button 
                 size="sm" 
                 variant="ghost" 
@@ -340,6 +342,28 @@ export function ReportsPage() {
               </Button>
             </div>
           </div>
+
+          {/* Mobile Filters (Visible only on mobile md:hidden) */}
+          <div className="md:hidden space-y-3 w-full">
+            {config.filter === 'range' && (
+              <div className="grid grid-cols-2 gap-2">
+                <DatePicker label="From Date" value={dateFrom} onChange={setDateFrom} placeholder="From" />
+                <DatePicker label="To Date" value={dateTo} onChange={setDateTo} placeholder="To" />
+              </div>
+            )}
+            {config.filter === 'date' && (
+              <DatePicker label="Select Date" value={singleDate} onChange={setSingleDate} placeholder="Select Date" />
+            )}
+            <Button
+              variant="secondary"
+              icon={Download}
+              onClick={() => window.print()}
+              className="w-full justify-center py-3 rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-700"
+            >
+              Export PDF / Print
+            </Button>
+          </div>
+
         </div>
         {renderBody()}
       </div>

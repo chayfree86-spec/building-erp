@@ -18,7 +18,7 @@ const navItems: NavItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
   { label: 'Sales', icon: Receipt, path: '/invoices' },
   { label: 'Purchases', icon: ShoppingCart, path: '/purchases' },
-  { label: 'Inventory', icon: Package, path: '/stock' },
+  { label: 'Stocks', icon: Package, path: '/stock' },
   { label: 'Customers', icon: Users, path: '/customers' },
   { label: 'Suppliers', icon: Truck, path: '/suppliers' },
   { label: 'Payments', icon: CreditCard, path: '/customer-payments', children: [

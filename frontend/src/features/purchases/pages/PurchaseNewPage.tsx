@@ -61,6 +61,7 @@ export function PurchaseNewPage() {
   // Items state managed separately for real-time calculations
   const [items, setItems] = useState<z.infer<typeof itemSchema>[]>([]);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
+  const [showSummarySheet, setShowSummarySheet] = useState(false);
 
   // Quick-add supplier modal
   const [showQuickAdd, setShowQuickAdd] = useState(false);
@@ -288,132 +289,410 @@ export function PurchaseNewPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <button onClick={() => navigate('/purchases')} className="p-2 hover:bg-neutral-100 rounded-lg">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div>
-          <h1 className="text-2xl font-bold text-neutral-900">New Purchase</h1>
-          <p className="text-sm text-neutral-500">Create a new purchase order</p>
+      
+      {/* ─── DESKTOP LAYOUT (Unchanged) ─── */}
+      <div className="hidden md:block space-y-6">
+        {/* Header */}
+        <div className="flex items-center gap-4">
+          <button onClick={() => navigate('/purchases')} className="p-2 hover:bg-neutral-100 rounded-lg">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-neutral-900">New Purchase</h1>
+            <p className="text-sm text-neutral-500">Create a new purchase order</p>
+          </div>
         </div>
-      </div>
-
-      <form onSubmit={handleSubmit(onSubmit)} onKeyDown={handleFormKeyDown} className="space-y-6">
-        {/* Header Card */}
-        <div className="card p-6">
-          <div className="flex items-center gap-2 mb-5">
-            <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
-              <Truck className="w-4 h-4 text-orange-600" />
+  
+        <form onSubmit={handleSubmit(onSubmit)} onKeyDown={handleFormKeyDown} className="space-y-6">
+          {/* Header Card */}
+          <div className="card p-6">
+            <div className="flex items-center gap-2 mb-5">
+              <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
+                <Truck className="w-4 h-4 text-orange-600" />
+              </div>
+              <h2 className="text-base font-semibold text-neutral-900 flex-1">Supplier & Purchase Info</h2>
+              <button type="button" onClick={() => setShowQuickAdd(true)} className="btn-primary text-xs py-1.5 px-3 gap-1.5">
+                <Truck className="w-3.5 h-3.5" /> New Supplier
+              </button>
             </div>
-            <h2 className="text-base font-semibold text-neutral-900 flex-1">Supplier & Purchase Info</h2>
-            <button type="button" onClick={() => setShowQuickAdd(true)} className="btn-primary text-xs py-1.5 px-3 gap-1.5">
-              <Truck className="w-3.5 h-3.5" /> New Supplier
-            </button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Supplier */}
-            <div>
-              <label className="label">Supplier <span className="text-red-500">*</span></label>
-              <SearchableSelect
-                options={suppliers.map(s => ({ value: s.id, label: s.name, sub: s.mobile || '' }))}
-                value={watch('supplier_id') || ''}
-                onChange={(val) => {
-                  const id = Number(val);
-                  setValue('supplier_id', id);
-                  setSelectedSupplier(suppliers.find(s => s.id === id) || null);
-                }}
-                placeholder="Search & select supplier..."
-                error={errors.supplier_id?.message}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Supplier */}
+              <div>
+                <label className="label">Supplier <span className="text-red-500">*</span></label>
+                <SearchableSelect
+                  options={suppliers.map(s => ({ value: s.id, label: s.name, sub: s.mobile || '' }))}
+                  value={watch('supplier_id') || ''}
+                  onChange={(val) => {
+                    const id = Number(val);
+                    setValue('supplier_id', id);
+                    setSelectedSupplier(suppliers.find(s => s.id === id) || null);
+                  }}
+                  placeholder="Search & select supplier..."
+                  error={errors.supplier_id?.message}
+                />
+              </div>
+  
+              {/* Date */}
+              <div>
+                <DatePicker
+                  label="Purchase Date *"
+                  value={watch('purchase_date')}
+                  onChange={(val) => setValue('purchase_date', val)}
+                  error={errors.purchase_date?.message}
+                />
+              </div>
+  
+              {/* Supplier Invoice # */}
+              <div>
+                <label className="label">Supplier Invoice #</label>
+                <input type="text" className="input-field w-full" placeholder="Supplier's bill number" {...register('supplier_invoice_number')} />
+              </div>
+  
+              {/* Remarks */}
+              <div>
+                <label className="label">Remarks</label>
+                <input type="text" className="input-field w-full" placeholder="Any notes about this purchase..." {...register('remarks')} />
+              </div>
             </div>
-
-            {/* Date */}
-            <div>
-              <DatePicker
-                label="Purchase Date *"
-                value={watch('purchase_date')}
-                onChange={(val) => setValue('purchase_date', val)}
-                error={errors.purchase_date?.message}
-              />
-            </div>
-
-            {/* Supplier Invoice # */}
-            <div>
-              <label className="label">Supplier Invoice #</label>
-              <input type="text" className="input-field w-full" placeholder="Supplier's bill number" {...register('supplier_invoice_number')} />
-            </div>
-
-            {/* Remarks */}
-            <div>
-              <label className="label">Remarks</label>
-              <input type="text" className="input-field w-full" placeholder="Any notes about this purchase..." {...register('remarks')} />
-            </div>
-          </div>
-
-          {/* Selected supplier info */}
-          {selectedSupplier && (
-            <div className="mt-4 p-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl border border-orange-100">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
-                  <span className="text-orange-700 font-bold text-sm">{selectedSupplier.name.charAt(0)}</span>
-                </div>
-                <div>
-                  <p className="font-semibold text-neutral-900">{selectedSupplier.name}</p>
-                  <div className="flex items-center gap-3 text-xs text-neutral-500 mt-0.5">
-                    {selectedSupplier.mobile && <span>{selectedSupplier.mobile}</span>}
-                    <span>GST: {selectedSupplier.gst_number || 'N/A'}</span>
-                    {selectedSupplier.category && (
-                      <span className="px-2 py-0.5 bg-orange-100 text-orange-800 rounded-md font-medium text-[10px]">
-                        Category: {selectedSupplier.category.name}
-                      </span>
-                    )}
+  
+            {/* Selected supplier info */}
+            {selectedSupplier && (
+              <div className="mt-4 p-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl border border-orange-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
+                    <span className="text-orange-700 font-bold text-sm">{selectedSupplier.name.charAt(0)}</span>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-neutral-900">{selectedSupplier.name}</p>
+                    <div className="flex items-center gap-3 text-xs text-neutral-500 mt-0.5">
+                      {selectedSupplier.mobile && <span>{selectedSupplier.mobile}</span>}
+                      <span>GST: {selectedSupplier.gst_number || 'N/A'}</span>
+                      {selectedSupplier.category && (
+                        <span className="px-2 py-0.5 bg-orange-100 text-orange-800 rounded-md font-medium text-[10px]">
+                          Category: {selectedSupplier.category.name}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
+            )}
+          </div>
+  
+          {/* Items */}
+          <div className="card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-semibold text-neutral-900">Items</h2>
+                {selectedSupplier?.category && (
+                  <p className="text-xs text-neutral-500 mt-0.5">
+                    Showing items related to <span className="font-semibold text-orange-600">{selectedSupplier.category.name}</span>
+                  </p>
+                )}
+              </div>
+              <button type="button" onClick={addItem} className="btn btn-primary flex items-center gap-2 text-sm">
+                <Plus className="w-4 h-4" /> Add Item
+              </button>
             </div>
-          )}
-        </div>
-
-        {/* Items */}
-        <div className="card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-lg font-semibold text-neutral-900">Items</h2>
-              {selectedSupplier?.category && (
-                <p className="text-xs text-neutral-500 mt-0.5">
-                  Showing items related to <span className="font-semibold text-orange-600">{selectedSupplier.category.name}</span>
-                </p>
-              )}
-            </div>
-            <button type="button" onClick={addItem} className="btn btn-primary flex items-center gap-2 text-sm">
-              <Plus className="w-4 h-4" /> Add Item
+  
+            {items.length === 0 ? (
+              <div className="text-center py-12 text-neutral-400">
+                <p>No items added yet. Click "Add Item" to start.</p>
+              </div>
+            ) : (
+              <div className="overflow-visible">
+                <table className="w-full text-sm" style={{ overflow: 'visible' }}>
+                  <thead>
+                    <tr className="border-b text-left text-neutral-500">
+                      <th className="pb-2 font-medium w-8 px-2">#</th>
+                      <th className="pb-2 font-medium px-2">Product</th>
+                      <th className="pb-2 font-medium w-28 px-2">Unit</th>
+                      <th className="pb-2 font-medium text-right w-20 px-2">Qty</th>
+                      <th className="pb-2 font-medium text-right w-28 px-2">Purch. Price</th>
+                      <th className="pb-2 font-medium text-right w-28 px-2">Selling Price</th>
+                      <th className="pb-2 font-medium text-right w-20 px-2">Disc.</th>
+                      <th className="pb-2 font-medium text-right w-20 px-2">GST%</th>
+                      <th className="pb-2 font-medium text-right w-24 px-2">Tax Amt</th>
+                      <th className="pb-2 font-medium text-right w-28 px-2">Line Total</th>
+                      <th className="pb-2 w-10"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((item, idx) => {
+                      const product = products.find(p => p.id === Number(item.product_id));
+                      const category = product ? categories.find(c => Number(c.id) === Number(product.category_id)) : null;
+                      const allowedUnits = category?.units || [];
+                      const unitOptions = allowedUnits.length > 0
+                        ? allowedUnits.map((u: any) => ({ value: u.id, label: u.short_name }))
+                        : (product?.unit ? [{ value: product.unit.id, label: product.unit.short_name }] : []);
+  
+                      return (
+                        <tr key={idx} className="border-b border-neutral-100 hover:bg-neutral-50">
+                          <td className="py-3 px-2 text-neutral-400 align-middle">{idx + 1}</td>
+                          <td className="py-3 px-2 align-middle overflow-visible">
+                            <SearchableSelect
+                              compact
+                              options={filteredProducts.map(p => ({ value: p.id, label: p.name, sub: p.sku || '' }))}
+                              value={item.product_id || ''}
+                              onChange={(val) => updateItem(idx, 'product_id', Number(val))}
+                              placeholder="Select..."
+                            />
+                          </td>
+                          <td className="py-3 px-2 align-middle">
+                            <Select
+                              compact
+                              options={unitOptions}
+                              value={item.unit_id || ''}
+                              onChange={(val) => updateItem(idx, 'unit_id', Number(val))}
+                              disabled={!item.product_id}
+                              placeholder="Select..."
+                            />
+                          </td>
+                          <td className="py-3 px-2 align-middle">
+                            <input
+                              type="number"
+                              className="input-field w-full text-right text-sm !py-1.5 !px-2"
+                              min="0.001" step="0.001"
+                              value={item.quantity || ''}
+                              onChange={(e) => updateItem(idx, 'quantity', Number(e.target.value))}
+                              onFocus={(e) => e.target.select()}
+                            />
+                          </td>
+                          <td className="py-3 px-2 align-middle">
+                            <input
+                              type="number"
+                              className="input-field w-full text-right text-sm !py-1.5 !px-2"
+                              min="0" step="0.01"
+                              value={item.purchase_price || ''}
+                              onChange={(e) => updateItem(idx, 'purchase_price', Number(e.target.value))}
+                              onFocus={(e) => e.target.select()}
+                            />
+                          </td>
+                          <td className="py-3 px-2 align-middle">
+                            <input
+                              type="number"
+                              className="input-field w-full text-right text-sm !py-1.5 !px-2"
+                              min="0" step="0.01"
+                              value={item.selling_price || ''}
+                              onChange={(e) => updateItem(idx, 'selling_price', Number(e.target.value))}
+                              onFocus={(e) => e.target.select()}
+                            />
+                          </td>
+                          <td className="py-3 px-2 align-middle">
+                            <input
+                              type="number"
+                              className="input-field w-full text-right text-sm !py-1.5 !px-2"
+                              min="0" step="0.01"
+                              value={item.discount_amount || ''}
+                              onChange={(e) => updateItem(idx, 'discount_amount', Number(e.target.value))}
+                              onFocus={(e) => e.target.select()}
+                            />
+                          </td>
+                          <td className="py-3 px-2 align-middle">
+                            <input
+                              type="number"
+                              className="input-field w-full text-right text-sm !py-1.5 !px-2"
+                              min="0" step="0.01"
+                              value={item.gst_rate || ''}
+                              onChange={(e) => updateItem(idx, 'gst_rate', Number(e.target.value))}
+                              onFocus={(e) => e.target.select()}
+                            />
+                          </td>
+                          <td className="py-3 px-2 text-right tabular-nums text-neutral-600 align-middle">
+                            {formatCurrency(item.tax_amount)}
+                          </td>
+                          <td className="py-3 px-2 text-right font-semibold tabular-nums align-middle">
+                            {formatCurrency(item.line_total)}
+                          </td>
+                          <td className="py-3 align-middle">
+                            <button type="button" onClick={() => removeItem(idx)} className="p-1 text-red-400 hover:text-red-600">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+  
+            {/* Totals */}
+            {items.length > 0 && (
+              <div className="mt-6 border-t pt-4 flex justify-end">
+                <div className="w-72 space-y-2 text-sm">
+                  <div className="flex justify-between text-neutral-600">
+                    <span>Subtotal</span>
+                    <span className="tabular-nums font-medium">{formatCurrency(totals.subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-neutral-600">
+                    <span>Total Discount</span>
+                    <span className="tabular-nums text-red-600 font-medium">-{formatCurrency(totals.discount)}</span>
+                  </div>
+                  <div className="flex justify-between text-neutral-600">
+                    <span>Taxable Amount</span>
+                    <span className="tabular-nums font-medium">{formatCurrency(totals.taxable)}</span>
+                  </div>
+                  <div className="flex justify-between text-neutral-600">
+                    <span>Tax Amount</span>
+                    <span className="tabular-nums font-medium">{formatCurrency(totals.tax)}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-lg border-t pt-2 text-neutral-900">
+                    <span>Total</span>
+                    <span className="tabular-nums">{formatCurrency(totals.total)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+  
+          {/* Actions */}
+          <div className="flex items-center gap-3 justify-end">
+            <button type="button" onClick={() => navigate('/purchases')} className="btn btn-secondary">
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting || items.length === 0 || createMutation.isPending}
+              className="btn btn-primary flex items-center gap-2"
+            >
+              {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Save as Draft
             </button>
           </div>
+        </form>
+      </div>
 
-          {items.length === 0 ? (
-            <div className="text-center py-12 text-neutral-400">
-              <p>No items added yet. Click "Add Item" to start.</p>
+      {/* ─── PWA MOBILE LAYOUT (Optimized) ─── */}
+      <div className="md:hidden space-y-4 pb-28">
+        
+        {/* Navigation & Header */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <button onClick={() => navigate('/purchases')} className="p-2.5 bg-white text-neutral-600 border border-neutral-200 shadow-sm rounded-xl active:scale-95 transition-all">
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+            <div>
+              <h1 className="text-lg font-bold text-neutral-900 tracking-tight leading-tight">New Purchase</h1>
+              <p className="text-xs text-neutral-400 font-medium">Create a new purchase order</p>
             </div>
-          ) : (
-            <div className="overflow-visible">
-              <table className="w-full text-sm" style={{ overflow: 'visible' }}>
-                <thead>
-                  <tr className="border-b text-left text-neutral-500">
-                    <th className="pb-2 font-medium w-8 px-2">#</th>
-                    <th className="pb-2 font-medium px-2">Product</th>
-                    <th className="pb-2 font-medium w-28 px-2">Unit</th>
-                    <th className="pb-2 font-medium text-right w-20 px-2">Qty</th>
-                    <th className="pb-2 font-medium text-right w-28 px-2">Purch. Price</th>
-                    <th className="pb-2 font-medium text-right w-28 px-2">Selling Price</th>
-                    <th className="pb-2 font-medium text-right w-20 px-2">Disc.</th>
-                    <th className="pb-2 font-medium text-right w-20 px-2">GST%</th>
-                    <th className="pb-2 font-medium text-right w-24 px-2">Tax Amt</th>
-                    <th className="pb-2 font-medium text-right w-28 px-2">Line Total</th>
-                    <th className="pb-2 w-10"></th>
-                  </tr>
-                </thead>
-                <tbody>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowQuickAdd(true)}
+            className="flex items-center gap-1 bg-white hover:bg-neutral-50 text-indigo-600 border border-indigo-100 py-1.5 px-3 rounded-xl text-xs font-bold shadow-sm active:scale-95 transition-all"
+          >
+            <Plus className="w-3.5 h-3.5" /> Supplier
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit(onSubmit)} onKeyDown={handleFormKeyDown} className="space-y-4">
+          
+          {/* Double-Bezel nested wrapper container for main info */}
+          <div className="rounded-[24px] p-1 bg-neutral-100/60 border border-neutral-200/50 shadow-sm">
+            <div className="rounded-[20px] bg-white p-4 space-y-4 shadow-[inset_0_1px_1px_rgba(255,255,255,1)]">
+              
+              <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Truck className="w-3.5 h-3.5 text-neutral-500" /> Supplier & Order Info
+              </h2>
+
+              <div className="space-y-3.5">
+                {/* Supplier select */}
+                <div>
+                  <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider block mb-1">Supplier <span className="text-red-500">*</span></label>
+                  <SearchableSelect
+                    options={suppliers.map(s => ({ value: s.id, label: s.name, sub: s.mobile || '' }))}
+                    value={watch('supplier_id') || ''}
+                    onChange={(val) => {
+                      const id = Number(val);
+                      setValue('supplier_id', id);
+                      setSelectedSupplier(suppliers.find(s => s.id === id) || null);
+                    }}
+                    placeholder="Search & select supplier..."
+                    error={errors.supplier_id?.message}
+                  />
+                </div>
+
+                {/* Purchase Date */}
+                <DatePicker
+                  label="Purchase Date *"
+                  value={watch('purchase_date')}
+                  onChange={(val) => setValue('purchase_date', val)}
+                  error={errors.purchase_date?.message}
+                />
+
+                {/* Invoice number */}
+                <div>
+                  <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider block mb-1">Supplier Invoice #</label>
+                  <input
+                    type="text"
+                    className="input-field w-full text-sm py-2 px-3 rounded-xl"
+                    placeholder="Supplier's bill number"
+                    {...register('supplier_invoice_number')}
+                  />
+                </div>
+
+                {/* Remarks */}
+                <div>
+                  <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider block mb-1">Remarks</label>
+                  <input
+                    type="text"
+                    className="input-field w-full text-sm py-2 px-3 rounded-xl"
+                    placeholder="Any notes about this purchase..."
+                    {...register('remarks')}
+                  />
+                </div>
+              </div>
+
+              {/* Selected supplier visual feedback on mobile */}
+              {selectedSupplier && (
+                <div className="p-3 bg-orange-50/40 rounded-2xl border border-orange-100/50 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-orange-100 flex items-center justify-center shrink-0">
+                    <span className="text-orange-700 font-bold text-sm">{selectedSupplier.name.charAt(0)}</span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-neutral-800 text-xs truncate leading-tight">{selectedSupplier.name}</p>
+                    <p className="text-[10px] text-neutral-400 font-semibold mt-0.5">
+                      GST: {selectedSupplier.gst_number || 'N/A'} &bull; Mob: {selectedSupplier.mobile || 'N/A'}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+            </div>
+          </div>
+
+          {/* Items Section on mobile */}
+          <div className="rounded-[24px] p-1 bg-neutral-100/60 border border-neutral-200/50 shadow-sm">
+            <div className="rounded-[20px] bg-white p-4 space-y-4 shadow-[inset_0_1px_1px_rgba(255,255,255,1)]">
+              
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Calculator className="w-3.5 h-3.5 text-neutral-500" /> Items List
+                  </h2>
+                  {selectedSupplier?.category && (
+                    <p className="text-[10px] text-neutral-400 font-semibold mt-0.5">
+                      Supplier Category: <span className="text-orange-600">{selectedSupplier.category.name}</span>
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={addItem}
+                  className="flex items-center gap-1 bg-indigo-50 border border-indigo-100 text-indigo-600 py-1.5 px-3 rounded-xl text-xs font-bold active:scale-95 transition-all"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Add Item
+                </button>
+              </div>
+
+              {items.length === 0 ? (
+                <div className="text-center py-8 text-neutral-400 border border-dashed border-neutral-200 rounded-2xl bg-neutral-50/50">
+                  <p className="text-xs font-bold">No items added yet</p>
+                  <p className="text-[10px] mt-0.5 font-medium">Click "Add Item" to add purchase entries.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
                   {items.map((item, idx) => {
                     const product = products.find(p => p.id === Number(item.product_id));
                     const category = product ? categories.find(c => Number(c.id) === Number(product.category_id)) : null;
@@ -423,141 +702,223 @@ export function PurchaseNewPage() {
                       : (product?.unit ? [{ value: product.unit.id, label: product.unit.short_name }] : []);
 
                     return (
-                      <tr key={idx} className="border-b border-neutral-100 hover:bg-neutral-50">
-                        <td className="py-3 px-2 text-neutral-400 align-middle">{idx + 1}</td>
-                        <td className="py-3 px-2 align-middle overflow-visible">
+                      <div key={idx} className="relative p-3.5 bg-neutral-50/70 border border-neutral-200/50 rounded-2xl space-y-3">
+                        
+                        {/* Item Row Header / Index */}
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Item #{idx + 1}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeItem(idx)}
+                            className="p-1.5 text-red-500 bg-red-50 border border-red-100/50 rounded-lg active:scale-95 transition-all"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        {/* Product Dropdown */}
+                        <div>
+                          <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Product</label>
                           <SearchableSelect
                             compact
                             options={filteredProducts.map(p => ({ value: p.id, label: p.name, sub: p.sku || '' }))}
                             value={item.product_id || ''}
                             onChange={(val) => updateItem(idx, 'product_id', Number(val))}
-                            placeholder="Select..."
+                            placeholder="Select product..."
                           />
-                        </td>
-                        <td className="py-3 px-2 align-middle">
-                          <Select
-                            compact
-                            options={unitOptions}
-                            value={item.unit_id || ''}
-                            onChange={(val) => updateItem(idx, 'unit_id', Number(val))}
-                            disabled={!item.product_id}
-                            placeholder="Select..."
-                          />
-                        </td>
-                        <td className="py-3 px-2 align-middle">
-                          <input
-                            type="number"
-                            className="input-field w-full text-right text-sm !py-1.5 !px-2"
-                            min="0.001" step="0.001"
-                            value={item.quantity || ''}
-                            onChange={(e) => updateItem(idx, 'quantity', Number(e.target.value))}
-                            onFocus={(e) => e.target.select()}
-                          />
-                        </td>
-                        <td className="py-3 px-2 align-middle">
-                          <input
-                            type="number"
-                            className="input-field w-full text-right text-sm !py-1.5 !px-2"
-                            min="0" step="0.01"
-                            value={item.purchase_price || ''}
-                            onChange={(e) => updateItem(idx, 'purchase_price', Number(e.target.value))}
-                            onFocus={(e) => e.target.select()}
-                          />
-                        </td>
-                        <td className="py-3 px-2 align-middle">
-                          <input
-                            type="number"
-                            className="input-field w-full text-right text-sm !py-1.5 !px-2"
-                            min="0" step="0.01"
-                            value={item.selling_price || ''}
-                            onChange={(e) => updateItem(idx, 'selling_price', Number(e.target.value))}
-                            onFocus={(e) => e.target.select()}
-                          />
-                        </td>
-                        <td className="py-3 px-2 align-middle">
-                          <input
-                            type="number"
-                            className="input-field w-full text-right text-sm !py-1.5 !px-2"
-                            min="0" step="0.01"
-                            value={item.discount_amount || ''}
-                            onChange={(e) => updateItem(idx, 'discount_amount', Number(e.target.value))}
-                            onFocus={(e) => e.target.select()}
-                          />
-                        </td>
-                        <td className="py-3 px-2 align-middle">
-                          <input
-                            type="number"
-                            className="input-field w-full text-right text-sm !py-1.5 !px-2"
-                            min="0" step="0.01"
-                            value={item.gst_rate || ''}
-                            onChange={(e) => updateItem(idx, 'gst_rate', Number(e.target.value))}
-                            onFocus={(e) => e.target.select()}
-                          />
-                        </td>
-                        <td className="py-3 px-2 text-right tabular-nums text-neutral-600 align-middle">
-                          {formatCurrency(item.tax_amount)}
-                        </td>
-                        <td className="py-3 px-2 text-right font-semibold tabular-nums align-middle">
-                          {formatCurrency(item.line_total)}
-                        </td>
-                        <td className="py-3 align-middle">
-                          <button type="button" onClick={() => removeItem(idx)} className="p-1 text-red-400 hover:text-red-600">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </td>
-                      </tr>
+                        </div>
+
+                        {/* Unit & Quantity Grid */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Unit</label>
+                            <Select
+                              compact
+                              options={unitOptions}
+                              value={item.unit_id || ''}
+                              onChange={(val) => updateItem(idx, 'unit_id', Number(val))}
+                              disabled={!item.product_id}
+                              placeholder="Select unit..."
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Qty</label>
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              className="input-field w-full text-right text-xs py-1.5 px-2.5 rounded-xl font-semibold tabular-nums"
+                              min="0.001"
+                              step="0.001"
+                              value={item.quantity || ''}
+                              onChange={(e) => updateItem(idx, 'quantity', Number(e.target.value))}
+                              onFocus={(e) => e.target.select()}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Purchase & Selling Price Grid */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Purch. Price</label>
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              className="input-field w-full text-right text-xs py-1.5 px-2.5 rounded-xl font-semibold tabular-nums"
+                              min="0"
+                              step="0.01"
+                              value={item.purchase_price || ''}
+                              onChange={(e) => updateItem(idx, 'purchase_price', Number(e.target.value))}
+                              onFocus={(e) => e.target.select()}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Selling Price</label>
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              className="input-field w-full text-right text-xs py-1.5 px-2.5 rounded-xl font-semibold tabular-nums"
+                              min="0"
+                              step="0.01"
+                              value={item.selling_price || ''}
+                              onChange={(e) => updateItem(idx, 'selling_price', Number(e.target.value))}
+                              onFocus={(e) => e.target.select()}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Discount & GST Grid */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Discount Amt</label>
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              className="input-field w-full text-right text-xs py-1.5 px-2.5 rounded-xl font-semibold tabular-nums"
+                              min="0"
+                              step="0.01"
+                              value={item.discount_amount || ''}
+                              onChange={(e) => updateItem(idx, 'discount_amount', Number(e.target.value))}
+                              onFocus={(e) => e.target.select()}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">GST %</label>
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              className="input-field w-full text-right text-xs py-1.5 px-2.5 rounded-xl font-semibold tabular-nums"
+                              min="0"
+                              step="0.01"
+                              value={item.gst_rate || ''}
+                              onChange={(e) => updateItem(idx, 'gst_rate', Number(e.target.value))}
+                              onFocus={(e) => e.target.select()}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Calculation Feedback */}
+                        <div className="flex items-center justify-between pt-2.5 border-t border-neutral-200/40 text-xs font-semibold text-neutral-500">
+                          <span>Tax: <span className="text-neutral-700 tabular-nums">{formatCurrency(item.tax_amount)}</span></span>
+                          <span>Line Total: <span className="text-neutral-900 font-bold text-sm tabular-nums">{formatCurrency(item.line_total)}</span></span>
+                        </div>
+
+                      </div>
                     );
                   })}
-                </tbody>
-              </table>
-            </div>
-          )}
+                </div>
+              )}
 
-          {/* Totals */}
-          {items.length > 0 && (
-            <div className="mt-6 border-t pt-4 flex justify-end">
-              <div className="w-72 space-y-2 text-sm">
-                <div className="flex justify-between text-neutral-600">
-                  <span>Subtotal</span>
-                  <span className="tabular-nums font-medium">{formatCurrency(totals.subtotal)}</span>
-                </div>
-                <div className="flex justify-between text-neutral-600">
-                  <span>Total Discount</span>
-                  <span className="tabular-nums text-red-600 font-medium">-{formatCurrency(totals.discount)}</span>
-                </div>
-                <div className="flex justify-between text-neutral-600">
-                  <span>Taxable Amount</span>
-                  <span className="tabular-nums font-medium">{formatCurrency(totals.taxable)}</span>
-                </div>
-                <div className="flex justify-between text-neutral-600">
-                  <span>Tax Amount</span>
-                  <span className="tabular-nums font-medium">{formatCurrency(totals.tax)}</span>
-                </div>
-                <div className="flex justify-between font-bold text-lg border-t pt-2 text-neutral-900">
-                  <span>Total</span>
-                  <span className="tabular-nums">{formatCurrency(totals.total)}</span>
-                </div>
-              </div>
             </div>
-          )}
-        </div>
+          </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-3 justify-end">
-          <button type="button" onClick={() => navigate('/purchases')} className="btn btn-secondary">
-            Cancel
-          </button>
+        </form>
+
+        {/* Sticky Mobile Bottom Bar */}
+        <div className="fixed bottom-16 left-0 right-0 z-40 bg-white border-t border-neutral-200/80 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] px-4 py-3.5 flex flex-col gap-3">
+          
+          {/* Top Row: Total and Detailed Totals Switch */}
+          <div className="flex justify-between items-center w-full">
+            <div className="flex flex-col">
+              <span className="text-[9px] uppercase font-bold text-neutral-400 tracking-wider">Total Amount</span>
+              <span className="text-xl font-black text-indigo-600 tabular-nums tracking-tight">
+                {formatCurrency(totals.total)}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowSummarySheet(!showSummarySheet)}
+              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-neutral-100 hover:bg-neutral-200 text-neutral-700 active:scale-95 transition-all border border-neutral-200/60"
+            >
+              {showSummarySheet ? 'Hide Details' : 'View Details'}
+            </button>
+          </div>
+
+          {/* Bottom Row: Full Width Save Action */}
           <button
-            type="submit"
-            disabled={isSubmitting || items.length === 0 || createMutation.isPending}
-            className="btn btn-primary flex items-center gap-2"
+            type="button"
+            onClick={handleSubmit(onSubmit)}
+            disabled={isSubmitting || items.filter(i => Number(i.product_id) > 0).length === 0 || createMutation.isPending}
+            className="w-full py-4 rounded-2xl text-sm font-bold tracking-wide bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all shadow-md shadow-indigo-100/50 disabled:opacity-50 disabled:pointer-events-none border border-indigo-700"
           >
             {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Save as Draft
+            Save Purchase
           </button>
         </div>
-      </form>
 
+        {/* Detailed Summary Overlay Sheet Drawer */}
+        {showSummarySheet && (
+          <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/40 backdrop-blur-xs animate-[fadeIn_200ms_ease]">
+            <div className="absolute inset-0" onClick={() => setShowSummarySheet(false)} />
+            <div className="relative bg-white rounded-t-[28px] border-t border-neutral-100 shadow-2xl p-6 space-y-4 animate-[slideUp_250ms_ease-out]">
+              <div className="w-12 h-1 bg-neutral-200 rounded-full mx-auto" onClick={() => setShowSummarySheet(false)} />
+              
+              <div className="flex justify-between items-center pb-2 border-b border-neutral-50">
+                <h3 className="text-sm font-bold text-neutral-800 uppercase tracking-wider">Purchase Summary</h3>
+                <button
+                  type="button"
+                  onClick={() => setShowSummarySheet(false)}
+                  className="p-1 bg-neutral-50 hover:bg-neutral-100 rounded-full text-neutral-400"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3 py-2 text-xs">
+                <div className="flex justify-between text-neutral-500 font-medium">
+                  <span>Subtotal</span>
+                  <span className="tabular-nums font-bold text-neutral-800">{formatCurrency(totals.subtotal)}</span>
+                </div>
+                <div className="flex justify-between text-neutral-500 font-medium">
+                  <span>Total Discount</span>
+                  <span className="tabular-nums font-bold text-red-600">-{formatCurrency(totals.discount)}</span>
+                </div>
+                <div className="flex justify-between text-neutral-500 font-medium">
+                  <span>Taxable Amount</span>
+                  <span className="tabular-nums font-bold text-neutral-800">{formatCurrency(totals.taxable)}</span>
+                </div>
+                <div className="flex justify-between text-neutral-500 font-medium">
+                  <span>Tax Amount (GST)</span>
+                  <span className="tabular-nums font-bold text-neutral-800">{formatCurrency(totals.tax)}</span>
+                </div>
+                <div className="flex justify-between font-bold text-base border-t border-neutral-100 pt-3 text-neutral-900">
+                  <span>Grand Total</span>
+                  <span className="tabular-nums text-lg font-black text-indigo-600">{formatCurrency(totals.total)}</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowSummarySheet(false)}
+                className="w-full py-2.5 rounded-xl border border-neutral-200 text-neutral-600 font-bold text-xs bg-neutral-50 hover:bg-neutral-100"
+              >
+                Close Summary
+              </button>
+            </div>
+          </div>
+        )}
+
+      </div>
+  
       {/* Quick Add Supplier Modal */}
       {showQuickAdd && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

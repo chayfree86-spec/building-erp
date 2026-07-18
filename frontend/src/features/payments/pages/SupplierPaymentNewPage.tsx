@@ -195,13 +195,11 @@ export function SupplierPaymentNewPage() {
   };
 
   const navToPayment = () => navigate('/supplier-payments');
-  const navToPurchase = (id: number) => navigate('/purchases/' + id);
+  const isSupplierPreselected = searchParams.has('supplier');
 
-    const isSupplierPreselected = searchParams.has('supplier');
-
-    return (
-      <div className="space-y-6">
-        {/* Header */}
+  return (
+    <div className="space-y-6">
+      <div className="hidden md:block space-y-6">
         <div className="flex items-center gap-4">
           <button onClick={navToPayment} className="p-2 hover:bg-neutral-100 rounded-xl transition-colors">
             <ArrowLeft className="w-5 h-5 text-neutral-500" />
@@ -215,12 +213,10 @@ export function SupplierPaymentNewPage() {
         </div>
   
         <form onSubmit={handleSubmit(onSubmit)} onKeyDown={handleFormKeyDown} className="space-y-5">
-          {/* Payment Details Card */}
           <div className="card rounded-2xl p-6 space-y-4">
             <h2 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
               <CreditCard className="w-5 h-5 text-emerald-600" /> Payment Details
             </h2>
-  
             {isSupplierPreselected ? (
               <div className="flex items-center gap-3.5 p-4 bg-cyan-50/50 rounded-xl border border-cyan-100/80">
                 <div className="w-10 h-10 rounded-xl bg-cyan-100 flex items-center justify-center shrink-0">
@@ -260,7 +256,6 @@ export function SupplierPaymentNewPage() {
                 error={errors.supplier_id?.message}
               />
             )}
-  
             <div className="grid grid-cols-2 gap-4">
               <DatePicker label="Payment Date *" value={watch('payment_date')} onChange={(val) => setValue('payment_date', val)} />
               <SearchableSelect
@@ -272,7 +267,6 @@ export function SupplierPaymentNewPage() {
                 error={errors.payment_mode_id?.message}
               />
             </div>
-  
             <div>
               <label className="label">Amount *</label>
               <div className="relative">
@@ -289,7 +283,7 @@ export function SupplierPaymentNewPage() {
               </div>
               {errors.amount && <p className="text-red-500 text-xs mt-1">{errors.amount.message}</p>}
             </div>
-  
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="label">Transaction Reference</label>
@@ -300,7 +294,7 @@ export function SupplierPaymentNewPage() {
                 <input type="text" className="input-field" placeholder="Optional note" {...register('remarks')} />
               </div>
             </div>
-  
+
             {selectedSupplier && !isSupplierPreselected && (
               <div className="flex items-center gap-3 p-3 bg-cyan-50 rounded-xl text-sm">
                 <div className="w-8 h-8 rounded-lg bg-cyan-100 flex items-center justify-center">
@@ -314,102 +308,176 @@ export function SupplierPaymentNewPage() {
             )}
           </div>
 
-        {/* Invoice-wise Allocation */}
-        {supplierId > 0 && outstandingPurchases.length > 0 && (
-          <div className="card rounded-2xl p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
-                <ShoppingCart className="w-5 h-5 text-blue-600" /> Allocate to Purchases
-              </h2>
-              <button
-                type="button"
-                onClick={() => setAllocationMode(!allocationMode)}
-                className={'text-sm font-medium px-3 py-1.5 rounded-xl transition-colors ' + (allocationMode ? 'bg-blue-50 text-blue-700' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200')}
-              >
-                {allocationMode ? 'Invoice-wise ON' : 'Invoice-wise OFF'}
-              </button>
-            </div>
-
-            {allocationMode && (
-              <>
-                <div className="flex items-center justify-between text-sm">
-                  <p className="text-neutral-500">
-                    Allocated: <span className="font-semibold text-emerald-600 tabular-nums">{formatCurrency(totalAllocated)}</span>
-                    {paymentAmount > 0 ? ' / ' + formatCurrency(paymentAmount) : ''}
-                  </p>
-                  <button type="button" onClick={autoFillAllocations} className="text-xs text-primary-600 hover:text-primary-700 font-medium">
-                    Auto-fill
-                  </button>
-                </div>
-
-                {remainingAmount !== 0 && paymentAmount > 0 && (
-                  <div className={'text-xs px-3 py-1.5 rounded-lg font-medium ' + (remainingAmount > 0 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700')}>
-                    {remainingAmount > 0 ? 'Unallocated: ' + formatCurrency(remainingAmount) + ' (treated as advance)' : 'Over-allocated: ' + formatCurrency(Math.abs(remainingAmount))}
+          {supplierId > 0 && outstandingPurchases.length > 0 && (
+            <div className="card rounded-2xl p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
+                  <ShoppingCart className="w-5 h-5 text-blue-600" /> Allocate to Purchases
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setAllocationMode(!allocationMode)}
+                  className={'text-sm font-medium px-3 py-1.5 rounded-xl transition-colors ' + (allocationMode ? 'bg-blue-50 text-blue-700' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200')}
+                >
+                  {allocationMode ? 'Invoice-wise ON' : 'Invoice-wise OFF'}
+                </button>
+              </div>
+  
+              {allocationMode && (
+                <>
+                  <div className="flex items-center justify-between text-sm">
+                    <p className="text-neutral-500">
+                      Allocated: <span className="font-semibold text-emerald-600 tabular-nums">{formatCurrency(totalAllocated)}</span>
+                      {paymentAmount > 0 ? ' / ' + formatCurrency(paymentAmount) : ''}
+                    </p>
+                    <button type="button" onClick={autoFillAllocations} className="text-xs text-primary-600 hover:text-primary-700 font-medium">
+                      Auto-fill
+                    </button>
                   </div>
-                )}
-
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {purchasesLoading ? (
-                    <div className="space-y-2">
-                      <div className="h-12 bg-neutral-100 rounded-xl animate-pulse" />
-                      <div className="h-12 bg-neutral-100 rounded-xl animate-pulse" />
-                      <div className="h-12 bg-neutral-100 rounded-xl animate-pulse" />
+  
+                  {remainingAmount !== 0 && paymentAmount > 0 && (
+                    <div className={'text-xs px-3 py-1.5 rounded-lg font-medium ' + (remainingAmount > 0 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700')}>
+                      {remainingAmount > 0 ? 'Unallocated: ' + formatCurrency(remainingAmount) + ' (treated as advance)' : 'Over-allocated: ' + formatCurrency(Math.abs(remainingAmount))}
                     </div>
-                  ) : allocations.map(a => (
-                    <div key={a.purchase_id} className="flex items-center gap-3.5 p-3 bg-neutral-50 rounded-xl border border-neutral-100 hover:bg-neutral-100/50 transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={a.allocated > 0}
-                        onChange={(e) => {
-                          updateAllocation(a.purchase_id, e.target.checked ? a.balance : 0);
-                        }}
-                        className="w-4 h-4 rounded text-cyan-600 focus:ring-cyan-500 border-neutral-300 cursor-pointer"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-neutral-800 truncate">{a.purchase_number}</p>
-                        <p className="text-xs text-neutral-400">{formatDate(a.purchase_date)} | Balance: <span className="font-medium text-neutral-600 tabular-nums">{formatCurrency(a.balance)}</span></p>
+                  )}
+  
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {purchasesLoading ? (
+                      <div className="space-y-2">
+                        <div className="h-12 bg-neutral-100 rounded-xl animate-pulse" />
+                        <div className="h-12 bg-neutral-100 rounded-xl animate-pulse" />
+                        <div className="h-12 bg-neutral-100 rounded-xl animate-pulse" />
                       </div>
-                      <div className="flex items-center">
+                    ) : allocations.map(a => (
+                      <div key={a.purchase_id} className="flex items-center gap-3.5 p-3 bg-neutral-50 rounded-xl border border-neutral-100 hover:bg-neutral-100/50 transition-colors">
                         <input
-                          type="number"
-                          className="w-28 input-field text-right text-sm py-1.5 tabular-nums font-medium"
-                          min="0"
-                          max={a.balance}
-                          step="0.01"
-                          value={a.allocated || ''}
-                          onFocus={(e) => e.target.select()}
-                          onChange={(e) => updateAllocation(a.purchase_id, Number(e.target.value))}
+                          type="checkbox"
+                          checked={a.allocated > 0}
+                          onChange={(e) => {
+                            updateAllocation(a.purchase_id, e.target.checked ? a.balance : 0);
+                          }}
+                          className="w-4 h-4 rounded text-cyan-600 focus:ring-cyan-500 border-neutral-300 cursor-pointer"
                         />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-neutral-800 truncate">{a.purchase_number}</p>
+                          <p className="text-xs text-neutral-400">{formatDate(a.purchase_date)} | Balance: <span className="font-medium text-neutral-600 tabular-nums">{formatCurrency(a.balance)}</span></p>
+                        </div>
+                        <div className="flex items-center">
+                          <input
+                            type="number"
+                            className="w-28 input-field text-right text-sm py-1.5 tabular-nums font-medium"
+                            min="0"
+                            max={a.balance}
+                            step="0.01"
+                            value={a.allocated || ''}
+                            onFocus={(e) => e.target.select()}
+                            onChange={(e) => updateAllocation(a.purchase_id, Number(e.target.value))}
+                          />
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        )}
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+  
+          {supplierId > 0 && outstandingPurchases.length === 0 && !purchasesLoading && (
+            <div className="card rounded-2xl p-8 text-center">
+              <ShoppingCart className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
+              <p className="text-neutral-500 font-medium">No outstanding purchases</p>
+              <p className="text-sm text-neutral-400 mt-1">All purchases are fully paid. Payment will be recorded as advance.</p>
+            </div>
+          )}
 
-        {/* No purchases state */}
-        {supplierId > 0 && outstandingPurchases.length === 0 && !purchasesLoading && (
-          <div className="card rounded-2xl p-8 text-center">
-            <ShoppingCart className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
-            <p className="text-neutral-500 font-medium">No outstanding purchases</p>
-            <p className="text-sm text-neutral-400 mt-1">All purchases are fully paid. Payment will be recorded as advance.</p>
+          <div className="card rounded-2xl p-4 flex items-center justify-end gap-3">
+            <button type="button" onClick={navToPayment} className="btn btn-secondary">Cancel</button>
+            <button type="submit" disabled={createMutation.isPending} className="btn btn-primary">
+              {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Save Payment
+            </button>
           </div>
-        )}
+        </form>
+      </div>
 
-        {/* Actions */}
-        <div className="card rounded-2xl p-4 flex items-center justify-end gap-3">
-          <button type="button" onClick={navToPayment} className="btn btn-secondary">Cancel</button>
-          <button type="submit" disabled={createMutation.isPending} className="btn btn-primary">
-            {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Save Payment
+      <div className="md:hidden space-y-5 pb-20">
+        <div className="flex items-center gap-3">
+          <button onClick={navToPayment} className="p-2.5 bg-white hover:bg-neutral-50 text-neutral-600 border border-neutral-200 shadow-sm rounded-xl active:scale-95 transition-all">
+            <ArrowLeft className="w-4 h-4" />
           </button>
+          <div>
+            <h1 className="text-lg font-bold text-neutral-900 tracking-tight leading-tight">
+              {isSupplierPreselected && selectedSupplier ? `Payment to ${selectedSupplier.name}` : 'Record Payment'}
+            </h1>
+          </div>
         </div>
-      </form>
-
+        <form onSubmit={handleSubmit(onSubmit)} onKeyDown={handleFormKeyDown} className="space-y-4">
+          <div className="rounded-[24px] p-1 bg-neutral-100/60 border border-neutral-200/50 shadow-sm">
+            <div className="rounded-[20px] bg-white p-4 space-y-4 shadow-[inset_0_1px_1px_rgba(255,255,255,1)]">
+              <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-1.5">
+                <CreditCard className="w-3.5 h-3.5 text-neutral-500" /> Payment details
+              </h2>
+              {isSupplierPreselected ? (
+                <div className="flex items-center gap-3 p-3 bg-cyan-50/40 rounded-2xl border border-cyan-100/50">
+                  <div className="w-9 h-9 rounded-xl bg-cyan-100/60 flex items-center justify-center shrink-0 border border-cyan-100/40">
+                    <ShoppingCart className="w-4.5 h-4.5 text-cyan-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[9px] uppercase font-bold text-cyan-500 tracking-wider block">Supplier</span>
+                    <p className="font-bold text-neutral-800 text-sm leading-tight mt-0.5">{selectedSupplier?.name || 'Loading...'}</p>
+                  </div>
+                </div>
+              ) : (
+                <SearchableSelect
+                  label="Supplier *"
+                  options={suppliers.map(s => ({ value: s.id, label: s.name }))}
+                  value={supplierId || ''}
+                  onChange={(val) => {
+                    const id = Number(val); setValue('supplier_id', id);
+                    setSelectedSupplier(suppliers.find(s => s.id === id) || null);
+                  }}
+                  placeholder="Select supplier..."
+                  error={errors.supplier_id?.message}
+                />
+              )}
+              <div className="space-y-3.5">
+                <DatePicker label="Payment Date *" value={watch('payment_date')} onChange={(val) => setValue('payment_date', val)} />
+                <SearchableSelect
+                  label="Payment Mode *"
+                  options={modes.map((m: any) => ({ value: m.id, label: m.name }))}
+                  value={watch('payment_mode_id') || ''}
+                  onChange={(val) => setValue('payment_mode_id', Number(val))}
+                  placeholder="Select mode..."
+                  error={errors.payment_mode_id?.message}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider block">Amount *</label>
+                <div className="relative rounded-2xl bg-neutral-50/60 border border-neutral-200/70 p-1 flex items-center">
+                  <span className="pl-3 text-lg font-bold text-neutral-400 select-none">₹</span>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    className="w-full bg-transparent border-0 focus:ring-0 text-base font-bold tabular-nums text-neutral-800 py-2.5 px-2"
+                    placeholder="0.00"
+                    {...register('amount', { valueAsNumber: true })}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-[24px] p-3 bg-white border border-neutral-200/60 shadow-sm flex items-center gap-3">
+            <button type="button" onClick={navToPayment} className="flex-1 py-2.5 rounded-xl border border-neutral-200 text-neutral-600 font-bold text-xs active:scale-95 transition-all text-center">Cancel</button>
+            <button type="submit" disabled={createMutation.isPending} className="flex-1 py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-xs active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-md">
+              {createMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+              Save
+            </button>
+          </div>
+        </form>
+      </div>
+  
       {showModeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-[fadeIn_200ms_ease]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl max-w-md w-full border border-neutral-100 shadow-2xl p-6 space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">

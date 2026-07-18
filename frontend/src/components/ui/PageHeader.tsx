@@ -16,10 +16,12 @@ export function PageHeader({ title, description, action, children }: PageHeaderP
         <h1 className="text-2xl font-bold text-neutral-900">{title}</h1>
         {description && <p className="text-neutral-500 text-sm mt-0.5">{description}</p>}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 w-full sm:w-auto">
         {children}
         {action && (
-          <Button variant="primary" icon={action.icon ?? Plus} loading={action.loading} onClick={action.onClick}>{action.label}</Button>
+          <Button variant="primary" icon={action.icon ?? Plus} loading={action.loading} onClick={action.onClick} className="w-full sm:w-auto justify-center">
+            {action.label}
+          </Button>
         )}
       </div>
     </div>

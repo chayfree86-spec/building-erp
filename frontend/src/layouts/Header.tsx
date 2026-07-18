@@ -3,6 +3,7 @@ import { Search, Bell, LogOut, User, Settings, ChevronDown, Store as StoreIcon, 
 import { useAuth } from '@/features/auth/auth-context';
 import { Link, useNavigate } from 'react-router-dom';
 import apiClient from '@/services/api';
+import { NetworkStatus } from '@/components/shared/PwaComponents';
 
 export function Header() {
   const { user, stores, activeStoreId, setActiveStore, logout } = useAuth();
@@ -254,6 +255,7 @@ export function Header() {
 
       {/* Right: Actions */}
       <div className="flex items-center gap-2">
+        <NetworkStatus />
 
         {/* Notifications */}
         <button className="btn-icon relative">

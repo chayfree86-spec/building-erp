@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Loader2, Save, CreditCard, Receipt, Plus, Minus } from 'lucide-react';
+import { ArrowLeft, Loader2, Save, CreditCard, Receipt } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { DatePicker } from '@/components/ui/DatePicker';
@@ -43,8 +43,6 @@ export function CustomerPaymentNewPage() {
   const resolvedStoreId = activeStoreId !== 'all' ? Number(activeStoreId) : (stores[0]?.id || 1);
   const [allocations, setAllocations] = useState<InvoiceAllocation[]>([]);
   const [allocationMode, setAllocationMode] = useState(false);
-  const [showModeModal, setShowModeModal] = useState(false);
-  const [selectedModalMode, setSelectedModalMode] = useState<number | null>(null);
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -127,8 +125,8 @@ export function CustomerPaymentNewPage() {
 
   const defaultAmount = selectedCustomer ? Math.max(0, Number(selectedCustomer.outstanding_balance) || 0) : 0;
   const isMatchingDefault = Number(paymentAmount) === defaultAmount && defaultAmount > 0;
-  const inputColorClass = isMatchingDefault ? 'text-[#e25c6a]' : 'text-emerald-600';
-  const iconColorClass = isMatchingDefault ? 'text-[#e25c6a]' : 'text-emerald-500';
+  const inputColorClass = isMatchingDefault ? 'text-emerald-600' : 'text-emerald-600';
+  const iconColorClass = isMatchingDefault ? 'text-emerald-500' : 'text-emerald-500';
 
   const createMutation = useMutation({
     mutationFn: (payload: any) => paymentsApi.customerCreate(payload),
@@ -203,11 +201,13 @@ export function CustomerPaymentNewPage() {
   const navToPayment = () => navigate('/customer-payments');
   const navToInvoice = (id: number) => navigate('/invoices/' + id);
 
-    const isCustomerPreselected = searchParams.has('customer');
+  const isCustomerPreselected = searchParams.has('customer');
 
-    return (
-      <div className="space-y-6">
-        {/* Header */}
+  return (
+    <div className="space-y-6">
+      
+      {/* ─── DESKTOP LAYOUT (Unchanged) ─── */}
+      <div className="hidden md:block space-y-6">
         <div className="flex items-center gap-4">
           <button onClick={navToPayment} className="p-2 hover:bg-neutral-100 rounded-xl transition-colors">
             <ArrowLeft className="w-5 h-5 text-neutral-500" />
@@ -219,14 +219,13 @@ export function CustomerPaymentNewPage() {
             <p className="text-sm text-neutral-500 mt-0.5">Record payment received from customer</p>
           </div>
         </div>
-  
+
         <form onSubmit={handleSubmit(onSubmit)} onKeyDown={handleFormKeyDown} className="space-y-5">
-          {/* Payment Details Card */}
           <div className="card rounded-2xl p-6 space-y-4">
             <h2 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
               <CreditCard className="w-5 h-5 text-emerald-600" /> Payment Details
             </h2>
-  
+
             {isCustomerPreselected ? (
               <div className="flex items-center gap-3.5 p-4 bg-blue-50/50 rounded-xl border border-blue-100/80">
                 <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
@@ -266,7 +265,7 @@ export function CustomerPaymentNewPage() {
                 error={errors.customer_id?.message}
               />
             )}
-  
+
             <div className="grid grid-cols-2 gap-4">
               <DatePicker label="Payment Date *" value={watch('payment_date')} onChange={(val) => setValue('payment_date', val)} />
               <SearchableSelect
@@ -278,7 +277,7 @@ export function CustomerPaymentNewPage() {
                 error={errors.payment_mode_id?.message}
               />
             </div>
-  
+
             <div>
               <label className="label">Amount *</label>
               <div className="relative">
@@ -295,7 +294,7 @@ export function CustomerPaymentNewPage() {
               </div>
               {errors.amount && <p className="text-red-500 text-xs mt-1">{errors.amount.message}</p>}
             </div>
-  
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="label">Transaction Reference</label>
@@ -306,7 +305,7 @@ export function CustomerPaymentNewPage() {
                 <input type="text" className="input-field" placeholder="Optional note" {...register('remarks')} />
               </div>
             </div>
-  
+
             {selectedCustomer && !isCustomerPreselected && (
               <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl text-sm">
                 <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
@@ -320,98 +319,325 @@ export function CustomerPaymentNewPage() {
             )}
           </div>
 
-        {/* Invoice-wise Allocation */}
-        {customerId > 0 && outstandingInvoices.length > 0 && (
-          <div className="card rounded-2xl p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
-                <Receipt className="w-5 h-5 text-blue-600" /> Allocate to Invoices
-              </h2>
-              <button
-                type="button"
-                onClick={() => setAllocationMode(!allocationMode)}
-                className={'text-sm font-medium px-3 py-1.5 rounded-xl transition-colors ' + (allocationMode ? 'bg-blue-50 text-blue-700' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200')}
-              >
-                {allocationMode ? 'Invoice-wise ON' : 'Invoice-wise OFF'}
-              </button>
-            </div>
+          {customerId > 0 && outstandingInvoices.length > 0 && (
+            <div className="card rounded-2xl p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
+                  <Receipt className="w-5 h-5 text-blue-600" /> Allocate to Invoices
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setAllocationMode(!allocationMode)}
+                  className={'text-sm font-medium px-3 py-1.5 rounded-xl transition-colors ' + (allocationMode ? 'bg-blue-50 text-blue-700' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200')}
+                >
+                  {allocationMode ? 'Invoice-wise ON' : 'Invoice-wise OFF'}
+                </button>
+              </div>
 
-            {allocationMode && (
-              <>
-                <div className="flex items-center justify-between text-sm">
-                  <p className="text-neutral-500">
-                    Allocated: <span className="font-semibold text-emerald-600 tabular-nums">{formatCurrency(totalAllocated)}</span>
-                    {paymentAmount > 0 ? ' / ' + formatCurrency(paymentAmount) : ''}
-                  </p>
-                  <button type="button" onClick={autoFillAllocations} className="text-xs text-primary-600 hover:text-primary-700 font-medium">
-                    Auto-fill
+              {allocationMode && (
+                <>
+                  <div className="flex items-center justify-between text-sm">
+                    <p className="text-neutral-500">
+                      Allocated: <span className="font-semibold text-emerald-600 tabular-nums">{formatCurrency(totalAllocated)}</span>
+                      {paymentAmount > 0 ? ' / ' + formatCurrency(paymentAmount) : ''}
+                    </p>
+                    <button type="button" onClick={autoFillAllocations} className="text-xs text-primary-600 hover:text-primary-700 font-medium">
+                      Auto-fill
+                    </button>
+                  </div>
+
+                  {remainingAmount !== 0 && paymentAmount > 0 && (
+                    <div className={'text-xs px-3 py-1.5 rounded-lg font-medium ' + (remainingAmount > 0 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700')}>
+                      {remainingAmount > 0 ? 'Unallocated: ' + formatCurrency(remainingAmount) + ' (treated as advance)' : 'Over-allocated: ' + formatCurrency(Math.abs(remainingAmount))}
+                    </div>
+                  )}
+
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {invoicesLoading ? (
+                      <div className="space-y-2">
+                        <div className="h-12 bg-neutral-100 rounded-xl animate-pulse" />
+                        <div className="h-12 bg-neutral-100 rounded-xl animate-pulse" />
+                      </div>
+                    ) : allocations.map(a => (
+                      <div key={a.invoice_id} className="flex items-center gap-3.5 p-3 bg-neutral-50 rounded-xl border border-neutral-100 hover:bg-neutral-100/50 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={a.allocated > 0}
+                          onChange={(e) => {
+                            updateAllocation(a.invoice_id, e.target.checked ? a.balance : 0);
+                          }}
+                          className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-neutral-300 cursor-pointer"
+                        />
+                        <button type="button" onClick={() => navToInvoice(a.invoice_id)} className="flex-1 min-w-0 text-left">
+                          <p className="text-sm font-medium text-neutral-800 truncate hover:text-primary-600">{a.invoice_number}</p>
+                          <p className="text-xs text-neutral-400">{formatDate(a.invoice_date)} | Balance: <span className="font-medium text-neutral-600 tabular-nums">{formatCurrency(a.balance)}</span></p>
+                        </button>
+                        <div className="flex items-center">
+                          <input
+                            type="number"
+                            className="w-28 input-field text-right text-sm py-1.5 tabular-nums font-medium"
+                            min="0"
+                            max={a.balance}
+                            step="0.01"
+                            value={a.allocated || ''}
+                            onFocus={(e) => e.target.select()}
+                            onChange={(e) => updateAllocation(a.invoice_id, Number(e.target.value))}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {customerId > 0 && outstandingInvoices.length === 0 && !invoicesLoading && (
+            <div className="card rounded-2xl p-8 text-center">
+              <Receipt className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
+              <p className="text-neutral-500 font-medium">No outstanding invoices</p>
+              <p className="text-sm text-neutral-400 mt-1">All invoices are fully paid. Payment will be recorded as advance.</p>
+            </div>
+          )}
+
+          <div className="card rounded-2xl p-4 flex items-center justify-end gap-3">
+            <button type="button" onClick={navToPayment} className="btn btn-secondary">Cancel</button>
+            <button type="submit" disabled={createMutation.isPending} className="btn btn-primary">
+              {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Save Payment
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* ─── PWA MOBILE LAYOUT (Optimized) ─── */}
+      <div className="md:hidden space-y-5 pb-20">
+        
+        {/* Navigation & Header */}
+        <div className="flex items-center gap-3">
+          <button onClick={navToPayment} className="p-2 hover:bg-neutral-100 active:scale-95 rounded-xl transition-all border border-neutral-200/50 bg-white shadow-sm">
+            <ArrowLeft className="w-4 h-4 text-neutral-600" />
+          </button>
+          <div>
+            <h1 className="text-lg font-bold text-neutral-900 tracking-tight leading-tight">
+              {isCustomerPreselected && selectedCustomer ? `Payment from ${selectedCustomer.name}` : 'Receive Payment'}
+            </h1>
+            <p className="text-xs text-neutral-400 mt-0.5 font-medium">Record customer payment received</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit(onSubmit)} onKeyDown={handleFormKeyDown} className="space-y-4">
+          
+          {/* Double-Bezel nested wrapper container */}
+          <div className="rounded-[24px] p-1 bg-neutral-100/60 border border-neutral-200/50 shadow-sm">
+            <div className="rounded-[20px] bg-white p-4 space-y-4 shadow-[inset_0_1px_1px_rgba(255,255,255,1)]">
+              
+              <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-1.5">
+                <CreditCard className="w-3.5 h-3.5 text-neutral-500" /> Payment details
+              </h2>
+
+              {isCustomerPreselected ? (
+                <div className="flex items-center gap-3 p-3 bg-blue-50/40 rounded-2xl border border-blue-100/50">
+                  <div className="w-9 h-9 rounded-xl bg-blue-100/60 flex items-center justify-center shrink-0 border border-blue-100/40">
+                    <Receipt className="w-4.5 h-4.5 text-blue-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[9px] uppercase font-bold text-blue-500 tracking-wider block">Customer Name</span>
+                    <p className="font-bold text-neutral-800 text-sm leading-tight mt-0.5">{selectedCustomer?.name || 'Loading customer...'}</p>
+                    {selectedCustomer && (
+                      <p className="text-[10px] text-neutral-400 mt-1 font-semibold">
+                        GST: {selectedCustomer.gst_number || 'N/A'} &bull; Mob: {selectedCustomer.mobile || 'N/A'}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <SearchableSelect
+                  label="Customer *"
+                  options={customers.map(c => ({
+                    value: c.id,
+                    label: c.name,
+                    sub: (
+                      <span className="flex items-center gap-1">
+                        {c.mobile && <span>{c.mobile}</span>}
+                        {c.mobile && <span className="text-neutral-300">•</span>}
+                        <span>Outstanding: <span className="text-red-600 font-semibold">{formatCurrency(c.outstanding_balance || 0)}</span></span>
+                      </span>
+                    ),
+                    subSearch: [c.mobile, c.outstanding_balance !== undefined ? String(c.outstanding_balance) : ''].filter(Boolean).join(' ')
+                  }))}
+                  value={customerId || ''}
+                  onChange={(val) => {
+                    const id = Number(val); setValue('customer_id', id);
+                    setSelectedCustomer(customers.find(c => c.id === id) || null);
+                  }}
+                  placeholder="Select customer..."
+                  error={errors.customer_id?.message}
+                />
+              )}
+
+              {/* Stacked single column grid on mobile to prevent squishing */}
+              <div className="space-y-3.5">
+                <DatePicker label="Payment Date *" value={watch('payment_date')} onChange={(val) => setValue('payment_date', val)} />
+                <SearchableSelect
+                  label="Payment Mode *"
+                  options={modes.map((m: any) => ({ value: m.id, label: m.name }))}
+                  value={watch('payment_mode_id') || ''}
+                  onChange={(val) => setValue('payment_mode_id', Number(val))}
+                  placeholder="Select mode..."
+                  error={errors.payment_mode_id?.message}
+                />
+              </div>
+
+              {/* Large, Beautiful Cashier Amount Box */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider block">Amount *</label>
+                <div className="relative rounded-2xl bg-neutral-50/60 border border-neutral-200/70 p-1 flex items-center">
+                  <span className="pl-3 text-lg font-bold text-neutral-400 select-none">₹</span>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    className="w-full bg-transparent border-0 focus:ring-0 text-base font-bold tabular-nums text-neutral-800 py-2.5 px-2 select-all placeholder-neutral-300"
+                    placeholder="0.00"
+                    step="0.01"
+                    min="0.01"
+                    {...register('amount', { valueAsNumber: true })}
+                    onFocus={(e) => e.target.select()}
+                  />
+                </div>
+                {errors.amount && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.amount.message}</p>}
+              </div>
+
+              {/* Stacked reference and remarks fields */}
+              <div className="space-y-3.5">
+                <div>
+                  <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider block mb-1">Transaction Reference</label>
+                  <input
+                    type="text"
+                    className="input-field w-full text-sm py-2 px-3 rounded-xl"
+                    placeholder="Cheque #, UPI Ref, GPay ID"
+                    {...register('transaction_reference')}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider block mb-1">Remarks</label>
+                  <input
+                    type="text"
+                    className="input-field w-full text-sm py-2 px-3 rounded-xl"
+                    placeholder="Optional remarks"
+                    {...register('remarks')}
+                  />
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          {/* Allocation Section in mobile */}
+          {customerId > 0 && outstandingInvoices.length > 0 && (
+            <div className="rounded-[24px] p-1 bg-neutral-100/60 border border-neutral-200/50 shadow-sm">
+              <div className="rounded-[20px] bg-white p-4 space-y-4 shadow-[inset_0_1px_1px_rgba(255,255,255,1)]">
+                
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Receipt className="w-3.5 h-3.5 text-neutral-500" /> Allocate to Invoices
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => setAllocationMode(!allocationMode)}
+                    className={'text-xs font-bold px-2.5 py-1.5 rounded-xl transition-all ' + (allocationMode ? 'bg-blue-50 text-blue-600 border border-blue-100/40' : 'bg-neutral-50 text-neutral-600 border border-neutral-200/60')}
+                  >
+                    {allocationMode ? 'Allocations ON' : 'Allocations OFF'}
                   </button>
                 </div>
 
-                {remainingAmount !== 0 && paymentAmount > 0 && (
-                  <div className={'text-xs px-3 py-1.5 rounded-lg font-medium ' + (remainingAmount > 0 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700')}>
-                    {remainingAmount > 0 ? 'Unallocated: ' + formatCurrency(remainingAmount) + ' (treated as advance)' : 'Over-allocated: ' + formatCurrency(Math.abs(remainingAmount))}
-                  </div>
-                )}
-
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {invoicesLoading ? (
-                    <div className="space-y-2">
-                      <div className="h-12 bg-neutral-100 rounded-xl animate-pulse" />
-                      <div className="h-12 bg-neutral-100 rounded-xl animate-pulse" />
-                    </div>
-                  ) : allocations.map(a => (
-                    <div key={a.invoice_id} className="flex items-center gap-3.5 p-3 bg-neutral-50 rounded-xl border border-neutral-100 hover:bg-neutral-100/50 transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={a.allocated > 0}
-                        onChange={(e) => {
-                          updateAllocation(a.invoice_id, e.target.checked ? a.balance : 0);
-                        }}
-                        className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-neutral-300 cursor-pointer"
-                      />
-                      <button type="button" onClick={() => navToInvoice(a.invoice_id)} className="flex-1 min-w-0 text-left">
-                        <p className="text-sm font-medium text-neutral-800 truncate hover:text-primary-600">{a.invoice_number}</p>
-                        <p className="text-xs text-neutral-400">{formatDate(a.invoice_date)} | Balance: <span className="font-medium text-neutral-600 tabular-nums">{formatCurrency(a.balance)}</span></p>
+                {allocationMode && (
+                  <>
+                    <div className="flex items-center justify-between text-xs font-bold text-neutral-500 pt-1 border-t border-neutral-50">
+                      <span>Allocated: <span className="text-emerald-600 tabular-nums">{formatCurrency(totalAllocated)}</span></span>
+                      <button type="button" onClick={autoFillAllocations} className="text-primary-600 active:scale-95 transition-all text-xs font-bold">
+                        Auto-fill
                       </button>
-                      <div className="flex items-center">
-                        <input
-                          type="number"
-                          className="w-28 input-field text-right text-sm py-1.5 tabular-nums font-medium"
-                          min="0"
-                          max={a.balance}
-                          step="0.01"
-                          value={a.allocated || ''}
-                          onFocus={(e) => e.target.select()}
-                          onChange={(e) => updateAllocation(a.invoice_id, Number(e.target.value))}
-                        />
-                      </div>
                     </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        )}
 
-        {/* No invoices state */}
-        {customerId > 0 && outstandingInvoices.length === 0 && !invoicesLoading && (
-          <div className="card rounded-2xl p-8 text-center">
-            <Receipt className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
-            <p className="text-neutral-500 font-medium">No outstanding invoices</p>
-            <p className="text-sm text-neutral-400 mt-1">All invoices are fully paid. Payment will be recorded as advance.</p>
-          </div>
-        )}
+                    {remainingAmount !== 0 && paymentAmount > 0 && (
+                      <div className={'text-[10px] font-bold px-2.5 py-1.5 rounded-xl ' + (remainingAmount > 0 ? 'bg-amber-50 text-amber-600 border border-amber-100/50' : 'bg-red-50 text-red-600 border border-red-100/50')}>
+                        {remainingAmount > 0 ? 'Unallocated: ' + formatCurrency(remainingAmount) + ' (treated as advance)' : 'Over-allocated: ' + formatCurrency(Math.abs(remainingAmount))}
+                      </div>
+                    )}
 
-        {/* Actions */}
-        <div className="card rounded-2xl p-4 flex items-center justify-end gap-3">
-          <button type="button" onClick={navToPayment} className="btn btn-secondary">Cancel</button>
-          <button type="submit" disabled={createMutation.isPending} className="btn btn-primary">
-            {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Save Payment
-          </button>
-        </div>
-      </form>
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {invoicesLoading ? (
+                        <div className="space-y-2">
+                          <div className="h-10 bg-neutral-50 rounded-xl animate-pulse" />
+                        </div>
+                      ) : allocations.map(a => (
+                        <div key={a.invoice_id} className="flex items-center gap-2.5 p-2.5 bg-neutral-50/50 rounded-2xl border border-neutral-100/80 hover:bg-neutral-100/40 transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={a.allocated > 0}
+                            onChange={(e) => {
+                              updateAllocation(a.invoice_id, e.target.checked ? a.balance : 0);
+                            }}
+                            className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-neutral-300 cursor-pointer"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-neutral-800 truncate">{a.invoice_number}</p>
+                            <p className="text-[10px] text-neutral-400 font-medium">{formatDate(a.invoice_date)} &bull; Bal: <span className="font-semibold text-neutral-600 tabular-nums">{formatCurrency(a.balance)}</span></p>
+                          </div>
+                          <div className="flex items-center">
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              className="w-20 input-field text-right text-xs py-1 px-2 tabular-nums font-bold"
+                              min="0"
+                              max={a.balance}
+                              step="0.01"
+                              value={a.allocated || ''}
+                              onFocus={(e) => e.target.select()}
+                              onChange={(e) => updateAllocation(a.invoice_id, Number(e.target.value))}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* No invoices state */}
+          {customerId > 0 && outstandingInvoices.length === 0 && !invoicesLoading && (
+            <div className="rounded-[24px] p-4 bg-neutral-50 border border-neutral-200/50 text-center space-y-2 shadow-sm">
+              <Receipt className="w-8 h-8 text-neutral-300 mx-auto" />
+              <p className="text-neutral-500 text-xs font-bold uppercase tracking-wider">No outstanding invoices</p>
+              <p className="text-[11px] text-neutral-400 leading-relaxed font-medium">All invoices are fully paid. The recorded payment will count as an advance.</p>
+            </div>
+          )}
+
+          {/* Save & Cancel buttons in a nice rounded block */}
+          <div className="rounded-[24px] p-3 bg-white border border-neutral-200/60 shadow-sm flex items-center gap-3">
+            <button
+              type="button"
+              onClick={navToPayment}
+              className="flex-1 py-2.5 rounded-xl border border-neutral-200 text-neutral-600 hover:bg-neutral-50 font-bold text-xs active:scale-95 transition-all text-center"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={createMutation.isPending}
+              className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-md shadow-indigo-100"
+            >
+              {createMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+              Save Payment
+            </button>
+          </div>
+
+        </form>
+      </div>
+
     </div>
   );
 }

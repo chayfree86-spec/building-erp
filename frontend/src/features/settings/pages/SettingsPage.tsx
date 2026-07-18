@@ -54,10 +54,10 @@ export function SettingsPage() {
     queryFn: async () => { const { data } = await settingsApi.get(); return data; },
   });
 
-  // Compute form data directly — no useEffect, no state loop
+  // Compute form data directly
   const [formData, setFormData] = useState<Record<string, string>>(defaultFormData);
   
-  // Derive form data from API response only on first load or when data changes structurally
+  // Derive form data from API response only on first load
   const apiDataJson = JSON.stringify((data as any)?.data ?? []);
   const prevApiJson = useRef('');
   if (apiDataJson !== prevApiJson.current && apiDataJson !== '[]') {
@@ -68,12 +68,10 @@ export function SettingsPage() {
       settingsArr.forEach((s: any) => {
         if (s.key) fromApi[s.key] = s.value?.toString() ?? '';
       });
-      // Only update if different from current
       const currentJson = JSON.stringify(formData);
       const newJson = JSON.stringify(fromApi);
       if (currentJson !== newJson && !hasLoadedRef.current) {
         hasLoadedRef.current = true;
-        // Use setTimeout to break the render cycle
         setTimeout(() => setFormData(fromApi), 0);
       }
     }
@@ -117,99 +115,174 @@ export function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Settings" description="Configure system preferences" action={{ label: 'Save Settings', onClick: handleSave, loading: saving, icon: Save }} />
+      
+      {/* ─── DESKTOP VERSION (Unchanged) ─── */}
+      <div className="hidden md:block space-y-6">
+        <PageHeader title="Settings" description="Configure system preferences" action={{ label: 'Save Settings', onClick: handleSave, loading: saving, icon: Save }} />
 
-      {Object.entries(groups).map(([group, defs]) => {
-        const Icon = groupIcons[group] || Building2;
-        return (
-          <div key={group} className="card">
-            <div className="flex items-center gap-3 px-6 py-4 border-b border-neutral-100">
-              <div className="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center">
-                <Icon className="w-4 h-4 text-primary-600" />
-              </div>
-              <h3 className="font-semibold text-neutral-900">{group}</h3>
-            </div>
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
-              {defs.map(def => (
-                <div key={def.key}>
-                  <label className="label">{def.label}</label>
-                  {def.type === 'boolean' ? (
-                    <label className="flex items-center gap-3 cursor-pointer mt-1">
-                      <input
-                        type="checkbox"
-                        checked={formData[def.key] === 'true' || formData[def.key] === '1'}
-                        onChange={e => handleChange(def.key, e.target.checked ? 'true' : 'false')}
-                        className="w-5 h-5 rounded border-neutral-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
-                      />
-                      <span className="text-sm text-neutral-700">Enabled</span>
-                    </label>
-                  ) : (
-                    <input
-                      value={formData[def.key] || ''}
-                      onChange={e => handleChange(def.key, e.target.value)}
-                      className="input-field"
-                      placeholder={def.placeholder || `Enter ${def.label.toLowerCase()}`}
-                      type={def.type === 'number' ? 'number' : 'text'}
-                    />
-                  )}
+        {Object.entries(groups).map(([group, defs]) => {
+          const Icon = groupIcons[group] || Building2;
+          return (
+            <div key={group} className="card">
+              <div className="flex items-center gap-3 px-6 py-4 border-b border-neutral-100">
+                <div className="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center">
+                  <Icon className="w-4 h-4 text-primary-600" />
                 </div>
-              ))}
+                <h3 className="font-semibold text-neutral-900">{group}</h3>
+              </div>
+              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+                {defs.map(def => (
+                  <div key={def.key}>
+                    <label className="label">{def.label}</label>
+                    {def.type === 'boolean' ? (
+                      <label className="flex items-center gap-3 cursor-pointer mt-1">
+                        <input
+                          type="checkbox"
+                          checked={formData[def.key] === 'true' || formData[def.key] === '1'}
+                          onChange={e => handleChange(def.key, e.target.checked ? 'true' : 'false')}
+                          className="w-5 h-5 rounded border-neutral-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                        />
+                        <span className="text-sm text-neutral-700">Enabled</span>
+                      </label>
+                    ) : (
+                      <input
+                        value={formData[def.key] || ''}
+                        onChange={e => handleChange(def.key, e.target.value)}
+                        className="input-field"
+                        placeholder={def.placeholder || `Enter ${def.label.toLowerCase()}`}
+                        type={def.type === 'number' ? 'number' : 'text'}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
 
-      {/* System Modules Quick Access */}
-      <div className="card">
-        <div className="flex items-center gap-3 px-6 py-4 border-b border-neutral-100">
-          <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
-            <Building2 className="w-4 h-4 text-indigo-600" />
+        {/* System Modules Quick Access */}
+        <div className="card">
+          <div className="flex items-center gap-3 px-6 py-4 border-b border-neutral-100">
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+              <Building2 className="w-4 h-4 text-indigo-600" />
+            </div>
+            <h3 className="font-semibold text-neutral-900">System Modules (Quick Access)</h3>
           </div>
-          <h3 className="font-semibold text-neutral-900">System Modules (Quick Access)</h3>
+          <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Link to="/purchase-returns" className="flex items-center justify-between p-4 rounded-xl border border-neutral-200 hover:bg-neutral-50 transition-all group">
+              <div>
+                <h4 className="font-semibold text-neutral-800 text-sm">Returns</h4>
+                <p className="text-xs text-neutral-400 mt-0.5">Manage customer & purchase returns</p>
+              </div>
+              <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center group-hover:bg-primary-50 transition-all">
+                <span className="text-neutral-500 group-hover:text-primary-600 font-semibold text-sm">→</span>
+              </div>
+            </Link>
+            <Link to="/stock-transfers" className="flex items-center justify-between p-4 rounded-xl border border-neutral-200 hover:bg-neutral-50 transition-all group">
+              <div>
+                <h4 className="font-semibold text-neutral-800 text-sm">Transfers</h4>
+                <p className="text-xs text-neutral-400 mt-0.5">Transfer inventory between stores</p>
+              </div>
+              <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center group-hover:bg-primary-50 transition-all">
+                <span className="text-neutral-500 group-hover:text-primary-600 font-semibold text-sm">→</span>
+              </div>
+            </Link>
+            <Link to="/users" className="flex items-center justify-between p-4 rounded-xl border border-neutral-200 hover:bg-neutral-50 transition-all group">
+              <div>
+                <h4 className="font-semibold text-neutral-800 text-sm">Users & Roles</h4>
+                <p className="text-xs text-neutral-400 mt-0.5">Manage staff access & roles</p>
+              </div>
+              <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center group-hover:bg-primary-50 transition-all">
+                <span className="text-neutral-500 group-hover:text-primary-600 font-semibold text-sm">→</span>
+              </div>
+            </Link>
+            <Link to="/audit-logs" className="flex items-center justify-between p-4 rounded-xl border border-neutral-200 hover:bg-neutral-50 transition-all group">
+              <div>
+                <h4 className="font-semibold text-neutral-800 text-sm">Audit Logs</h4>
+                <p className="text-xs text-neutral-400 mt-0.5">View system logs & track actions</p>
+              </div>
+              <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center group-hover:bg-primary-50 transition-all">
+                <span className="text-neutral-500 group-hover:text-primary-600 font-semibold text-sm">→</span>
+              </div>
+            </Link>
+          </div>
         </div>
-        <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Link to="/purchase-returns" className="flex items-center justify-between p-4 rounded-xl border border-neutral-200 hover:bg-neutral-50 transition-all group">
-            <div>
-              <h4 className="font-semibold text-neutral-800 text-sm">Returns</h4>
-              <p className="text-xs text-neutral-400 mt-0.5">Manage customer & purchase returns</p>
-            </div>
-            <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center group-hover:bg-primary-50 transition-all">
-              <span className="text-neutral-500 group-hover:text-primary-600 font-semibold text-sm">→</span>
-            </div>
-          </Link>
-          <Link to="/stock-transfers" className="flex items-center justify-between p-4 rounded-xl border border-neutral-200 hover:bg-neutral-50 transition-all group">
-            <div>
-              <h4 className="font-semibold text-neutral-800 text-sm">Transfers</h4>
-              <p className="text-xs text-neutral-400 mt-0.5">Transfer inventory between stores</p>
-            </div>
-            <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center group-hover:bg-primary-50 transition-all">
-              <span className="text-neutral-500 group-hover:text-primary-600 font-semibold text-sm">→</span>
-            </div>
-          </Link>
-          <Link to="/users" className="flex items-center justify-between p-4 rounded-xl border border-neutral-200 hover:bg-neutral-50 transition-all group">
-            <div>
-              <h4 className="font-semibold text-neutral-800 text-sm">Users & Roles</h4>
-              <p className="text-xs text-neutral-400 mt-0.5">Manage staff access & roles</p>
-            </div>
-            <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center group-hover:bg-primary-50 transition-all">
-              <span className="text-neutral-500 group-hover:text-primary-600 font-semibold text-sm">→</span>
-            </div>
-          </Link>
-          <Link to="/audit-logs" className="flex items-center justify-between p-4 rounded-xl border border-neutral-200 hover:bg-neutral-50 transition-all group">
-            <div>
-              <h4 className="font-semibold text-neutral-800 text-sm">Audit Logs</h4>
-              <p className="text-xs text-neutral-400 mt-0.5">View system logs & track actions</p>
-            </div>
-            <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center group-hover:bg-primary-50 transition-all">
-              <span className="text-neutral-500 group-hover:text-primary-600 font-semibold text-sm">→</span>
-            </div>
-          </Link>
+
+        <div className="flex justify-end">
+          <Button onClick={handleSave} loading={saving} icon={Save} size="lg">Save Settings</Button>
         </div>
       </div>
 
-      <div className="flex justify-end">
-        <Button onClick={handleSave} loading={saving} icon={Save} size="lg">Save Settings</Button>
+      {/* ─── PWA MOBILE VERSION (Optimized Settings Layout) ─── */}
+      <div className="md:hidden space-y-5 pb-24">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-neutral-900 tracking-tight">Settings</h1>
+            <p className="text-neutral-500 text-xs mt-0.5">Configure system preferences</p>
+          </div>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold active:scale-95 transition-all flex items-center gap-1.5 shadow-md shadow-indigo-100"
+          >
+            {saving ? 'Saving...' : 'Save'}
+          </button>
+        </div>
+
+        {Object.entries(groups).map(([group, defs]) => {
+          const Icon = groupIcons[group] || Building2;
+          return (
+            <div key={group} className="space-y-2">
+              <div className="flex items-center gap-2 px-1">
+                <Icon className="w-3.5 h-3.5 text-neutral-400" />
+                <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">{group}</h3>
+              </div>
+
+              <div className="rounded-[24px] p-1 bg-neutral-100/60 border border-neutral-200/50 shadow-sm">
+                <div className="rounded-[20px] bg-white p-4 space-y-4 shadow-[inset_0_1px_1px_rgba(255,255,255,1)]">
+                  {defs.map(def => (
+                    <div key={def.key} className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider block">{def.label}</label>
+                      {def.type === 'boolean' ? (
+                        <div className="flex items-center justify-between py-1.5 px-3 bg-neutral-50/50 border border-neutral-150 rounded-xl">
+                          <span className="text-xs text-neutral-600 font-semibold">Enabled State</span>
+                          <input
+                            type="checkbox"
+                            checked={formData[def.key] === 'true' || formData[def.key] === '1'}
+                            onChange={e => handleChange(def.key, e.target.checked ? 'true' : 'false')}
+                            className="w-5 h-5 rounded border-neutral-300 text-indigo-650 focus:ring-indigo-500 cursor-pointer"
+                          />
+                        </div>
+                      ) : (
+                        <input
+                          value={formData[def.key] || ''}
+                          onChange={e => handleChange(def.key, e.target.value)}
+                          className="input-field w-full py-2 px-3 text-xs rounded-xl border-neutral-200 bg-neutral-50/20 focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                          placeholder={def.placeholder || `Enter ${def.label.toLowerCase()}`}
+                          type={def.type === 'number' ? 'number' : 'text'}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Sticky Mobile Save Action Bar */}
+        <div className="fixed bottom-14 left-0 right-0 p-4 bg-gradient-to-t from-white via-white to-transparent md:hidden z-10">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full py-3 bg-indigo-650 hover:bg-indigo-750 text-white rounded-xl text-sm font-bold active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-100"
+          >
+            <Save className="w-4 h-4" />
+            {saving ? 'Saving Settings...' : 'Save Settings'}
+          </button>
+        </div>
       </div>
+
     </div>
   );
 }

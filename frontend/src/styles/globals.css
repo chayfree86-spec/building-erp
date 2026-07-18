@@ -176,3 +176,14 @@ input[type='number'] { -moz-appearance: textfield; }
 /* Skeleton */
 .skeleton { background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px; }
 @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+/* Global PWA Mobile Button Touch-Target Styles (Minimum 44px height) */
+@media (max-width: 768px) {
+  .btn-primary, .btn-secondary, .btn-danger, .btn-success, .btn-warning, .btn-purple {
+    padding-top: 0.8125rem !important;
+    padding-bottom: 0.8125rem !important;
+    font-size: 0.875rem !important;
+    border-radius: 1rem !important;
+    min-height: 46px;
+  }
+}

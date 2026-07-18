@@ -60,6 +60,7 @@ const PurchaseReturnNewPage = lazy(() => import('@/features/returns/pages/Purcha
 const SalesReturnNewPage = lazy(() => import('@/features/returns/pages/SalesReturnNewPage').then(m => ({ default: m.SalesReturnNewPage })));
 const PermissionsPage = lazy(() => import('@/features/roles/pages/PermissionsPage').then(m => ({ default: m.PermissionsPage })));
 const MorePage = lazy(() => import('@/features/more/pages/MorePage').then(m => ({ default: m.MorePage })));
+const PurchaseStockHub = lazy(() => import('@/features/purchases/pages/PurchaseStockHub').then(m => ({ default: m.PurchaseStockHub })));
 
 const PageLoader = () => <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 text-primary-600 animate-spin" /></div>;
 
@@ -102,6 +103,7 @@ export default function App() {
                   <Route path="customer-payments/new" element={<CustomerPaymentNewPage />} />
                   <Route path="supplier-payments" element={<SupplierPaymentsPage />} />
                   <Route path="supplier-payments/new" element={<SupplierPaymentNewPage />} />
+                  <Route path="purchase-stock" element={<PurchaseStockHub />} />
                   <Route path="stock" element={<StockPage />} />
                   <Route path="stock/batch" element={<StockBatchPage />} />
                   <Route path="stock-adjustments" element={<StockAdjustmentsPage />} />
