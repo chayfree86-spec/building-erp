@@ -39,21 +39,56 @@ class UserController extends Controller
             'mobile' => 'required|string|max:15|unique:users,mobile',
             'email' => 'nullable|email|max:100|unique:users,email',
             'password' => 'required|string|min:6',
+            'pin' => 'nullable|string|size:4',
             'status' => 'sometimes|in:active,inactive',
             'roles' => 'nullable|array',
             'roles.*.role_id' => 'required|exists:roles,id',
             'roles.*.store_id' => 'required|exists:stores,id',
+            'role_ids' => 'nullable|array',
+            'role_ids.*' => 'exists:roles,id',
+            'store_ids' => 'nullable|array',
+            'store_ids.*' => 'exists:stores,id',
         ]);
 
         $validated['password'] = Hash::make($validated['password']);
+        if (!empty($validated['pin'])) {
+            $validated['pin'] = Hash::make($validated['pin']);
+        }
+        
         $user = User::create($validated);
 
+        // Sync stores
+        if ($request->has('store_ids')) {
+            $syncData = [];
+            foreach ($request->store_ids as $idx => $storeId) {
+                $syncData[$storeId] = [
+                    'is_default' => ($idx === 0),
+                    'status' => 'active',
+                ];
+            }
+            $user->stores()->sync($syncData);
+        }
+
+        // Sync roles (flat selection)
+        if ($request->has('role_ids') && $request->has('store_ids')) {
+            foreach ($request->role_ids as $roleId) {
+                foreach ($request->store_ids as $storeId) {
+                    $user->userRoles()->create([
+                        'role_id' => $roleId,
+                        'store_id' => $storeId,
+                        'assigned_by' => $request->user()->id ?? $user->id,
+                    ]);
+                }
+            }
+        }
+
+        // Support old format
         if ($request->has('roles')) {
             foreach ($request->roles as $roleData) {
                 $user->userRoles()->create([
                     'role_id' => $roleData['role_id'],
                     'store_id' => $roleData['store_id'],
-                    'assigned_by' => $request->user()->id,
+                    'assigned_by' => $request->user()->id ?? $user->id,
                 ]);
             }
         }
@@ -82,7 +117,12 @@ class UserController extends Controller
             'mobile' => 'sometimes|string|max:15|unique:users,mobile,' . $id,
             'email' => 'nullable|email|max:100|unique:users,email,' . $id,
             'password' => 'nullable|string|min:6',
+            'pin' => 'nullable|string|size:4',
             'status' => 'sometimes|in:active,inactive',
+            'role_ids' => 'nullable|array',
+            'role_ids.*' => 'exists:roles,id',
+            'store_ids' => 'nullable|array',
+            'store_ids.*' => 'exists:stores,id',
         ]);
 
         if (!empty($data['password'])) {
@@ -91,7 +131,41 @@ class UserController extends Controller
             unset($data['password']);
         }
 
+        if (array_key_exists('pin', $data)) {
+            if (!empty($data['pin'])) {
+                $data['pin'] = Hash::make($data['pin']);
+            } else {
+                unset($data['pin']);
+            }
+        }
+
         $user->update($data);
+
+        // Sync stores
+        if ($request->has('store_ids')) {
+            $syncData = [];
+            foreach ($request->store_ids as $idx => $storeId) {
+                $syncData[$storeId] = [
+                    'is_default' => ($idx === 0),
+                    'status' => 'active',
+                ];
+            }
+            $user->stores()->sync($syncData);
+        }
+
+        // Sync roles (flat selection)
+        if ($request->has('role_ids') && $request->has('store_ids')) {
+            $user->userRoles()->delete();
+            foreach ($request->role_ids as $roleId) {
+                foreach ($request->store_ids as $storeId) {
+                    $user->userRoles()->create([
+                        'role_id' => $roleId,
+                        'store_id' => $storeId,
+                        'assigned_by' => $request->user()->id ?? $user->id,
+                    ]);
+                }
+            }
+        }
 
         return response()->json([
             'success' => true, 'message' => 'User updated.',

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/features/auth/auth-context';
 import { Eye, EyeOff, Loader2, CheckCircle, Mail, ArrowLeft } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -24,10 +24,82 @@ export function LoginPage() {
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
 
-  const { register, handleSubmit, formState: { errors, isSubmitting }, setValue } = useForm<LoginForm>({
+  const { register, handleSubmit, formState: { errors, isSubmitting }, setValue, watch } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { login: 'admin@buildingerp.com', password: 'password' },
+    defaultValues: { login: '96287171775', password: '2310' },
   });
+
+  const loginValue = watch('login') || '';
+  const isMobile = /^[0-9+\s-]*$/.test(loginValue.trim()) && loginValue.trim().length > 0;
+
+  const [pinValues, setPinValues] = useState(['', '', '', '']);
+  const passwordValue = watch('password') || '';
+
+  // Synchronize 4 PIN boxes when passwordValue changes
+  useEffect(() => {
+    if (isMobile) {
+      const digits = passwordValue.split('').slice(0, 4);
+      setPinValues([
+        digits[0] || '',
+        digits[1] || '',
+        digits[2] || '',
+        digits[3] || '',
+      ]);
+    }
+  }, [passwordValue, isMobile]);
+
+  const handlePinChange = (index: number, val: string) => {
+    const cleanVal = val.replace(/[^0-9]/g, '');
+    const newValues = [...pinValues];
+    newValues[index] = cleanVal.slice(-1);
+    setPinValues(newValues);
+    
+    const newPin = newValues.join('');
+    setValue('password', newPin, { shouldValidate: true });
+    
+    // Auto-focus next box
+    if (cleanVal && index < 3) {
+      const nextInput = document.getElementById(`pin-${index + 1}`);
+      nextInput?.focus();
+    }
+  };
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace') {
+      const newValues = [...pinValues];
+      if (!newValues[index] && index > 0) {
+        newValues[index - 1] = '';
+        setPinValues(newValues);
+        setValue('password', newValues.join(''), { shouldValidate: true });
+        const prevInput = document.getElementById(`pin-${index - 1}`);
+        prevInput?.focus();
+      } else {
+        newValues[index] = '';
+        setPinValues(newValues);
+        setValue('password', newValues.join(''), { shouldValidate: true });
+      }
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const pastedData = e.clipboardData.getData('text');
+    if (/^[0-9]{4}$/.test(pastedData)) {
+      const digits = pastedData.split('');
+      setPinValues(digits);
+      setValue('password', pastedData, { shouldValidate: true });
+      document.getElementById('pin-3')?.focus();
+    }
+    e.preventDefault();
+  };
+
+  // Clear password when switching login modes to avoid sending old password/PIN
+  const prevIsMobile = useRef(isMobile);
+  useEffect(() => {
+    if (prevIsMobile.current !== isMobile) {
+      setValue('password', '');
+      prevIsMobile.current = isMobile;
+    }
+  }, [isMobile, setValue]);
 
   // Load saved login on mount
   useEffect(() => {
@@ -175,14 +247,49 @@ export function LoginPage() {
               </div>
 
               <div>
-                <label className="label">Password</label>
-                <div className="relative">
-                  <input {...register('password')} type={showPassword ? 'text' : 'password'} placeholder="Enter your password" className="input-field pr-10" autoComplete="current-password" />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600">
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
+                <label className="label">{isMobile ? '4-Digit PIN' : 'Password'}</label>
+                {isMobile ? (
+                  <div className="space-y-2">
+                    <input type="hidden" {...register('password')} />
+                    <div className="flex items-center gap-3 justify-center py-2">
+                      <div className="flex gap-3">
+                        {pinValues.map((digit, idx) => (
+                          <input
+                            key={idx}
+                            id={`pin-${idx}`}
+                            type={showPassword ? 'text' : 'password'}
+                            value={digit}
+                            onChange={e => handlePinChange(idx, e.target.value)}
+                            onKeyDown={e => handleKeyDown(idx, e)}
+                            onPaste={handlePaste}
+                            className="w-12 h-12 text-center text-lg font-bold border border-neutral-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-neutral-50/30 shadow-sm transition-all focus:scale-105"
+                            maxLength={1}
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                          />
+                        ))}
+                      </div>
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="p-2.5 rounded-xl border border-neutral-200 bg-neutral-50/50 hover:bg-neutral-50 text-neutral-400 hover:text-neutral-600 transition-colors active:scale-95">
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    {errors.password && <p className="text-red-500 text-xs mt-1 text-center">{errors.password.message}</p>}
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <input
+                      {...register('password')}
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Enter your password"
+                      className="input-field pr-10"
+                      autoComplete="current-password"
+                    />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600">
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                )}
+                {!isMobile && errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
               </div>
 
               {/* Remember Me + Forgot Password */}

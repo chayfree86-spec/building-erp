@@ -15,17 +15,18 @@ class User extends Authenticatable
     use HasFactory, Notifiable, HasApiTokens;
 
     protected $fillable = [
-        'name', 'mobile', 'email', 'password', 'status', 'last_login_at',
+        'name', 'mobile', 'email', 'password', 'pin', 'status', 'last_login_at',
     ];
 
     protected $hidden = [
-        'password', 'remember_token',
+        'password', 'pin', 'remember_token',
     ];
 
     protected function casts(): array
     {
         return [
             'password' => 'hashed',
+            'pin' => 'hashed',
             'status' => 'string',
             'last_login_at' => 'datetime',
         ];

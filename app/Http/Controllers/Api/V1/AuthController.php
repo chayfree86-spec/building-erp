@@ -32,7 +32,17 @@ class AuthController extends Controller
             ->orWhere('mobile', $login)
             ->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        $authenticated = false;
+        if ($user) {
+            $isMobile = preg_match('/^[0-9+\s-]*$/', trim($login));
+            if ($isMobile && !empty($user->pin)) {
+                $authenticated = Hash::check($request->password, $user->pin);
+            } else {
+                $authenticated = Hash::check($request->password, $user->password);
+            }
+        }
+
+        if (!$user || !$authenticated) {
             LoginLog::create([
                 'email' => filter_var($login, FILTER_VALIDATE_EMAIL) ? $login : null,
                 'mobile' => !filter_var($login, FILTER_VALIDATE_EMAIL) ? $login : null,

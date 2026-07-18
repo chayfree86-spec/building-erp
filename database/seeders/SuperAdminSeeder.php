@@ -36,9 +36,10 @@ class SuperAdminSeeder extends Seeder
             ['email' => 'admin@buildingerp.com'],
             [
                 'name' => 'Super Admin',
-                'mobile' => '9999999999',
+                'mobile' => '96287171775',
                 'email' => 'admin@buildingerp.com',
                 'password' => 'password',
+                'pin' => '2310',
                 'status' => 'active',
             ]
         );

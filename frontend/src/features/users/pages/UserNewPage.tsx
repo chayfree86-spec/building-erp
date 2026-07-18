@@ -17,6 +17,7 @@ const formSchema = (isEdit: boolean) => z.object({
   email: z.string().email('Valid email required').optional().or(z.literal('')),
   mobile: z.string().min(1, 'Mobile is required').max(15),
   password: isEdit ? z.string().optional().or(z.literal('')) : z.string().min(6, 'Min 6 characters'),
+  pin: z.string().regex(/^\d{4}$/, 'PIN must be exactly 4 digits').optional().or(z.literal('')),
   role_ids: z.array(z.number()).min(1, 'At least 1 role required'),
   store_ids: z.array(z.number()).min(1, 'At least 1 store required'),
 });
@@ -26,6 +27,7 @@ type FormData = {
   email: string;
   mobile: string;
   password?: string;
+  pin?: string;
   role_ids: number[];
   store_ids: number[];
 };
@@ -39,7 +41,7 @@ export function UserNewPage() {
 
   const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(formSchema(isEdit)) as Resolver<FormData>,
-    defaultValues: { name: '', email: '', mobile: '', password: '', role_ids: [], store_ids: [] },
+    defaultValues: { name: '', email: '', mobile: '', password: '', pin: '', role_ids: [], store_ids: [] },
   });
 
   const { data: userData } = useQuery({
@@ -58,6 +60,7 @@ export function UserNewPage() {
         email: userData.email || '',
         mobile: userData.mobile || '',
         password: '',
+        pin: '',
         role_ids: Array.isArray(userData.roles) ? userData.roles.map((r: any) => r.id) : [],
         store_ids: Array.isArray(userData.stores) ? userData.stores.map((s: any) => s.id) : [],
       });
@@ -92,6 +95,7 @@ export function UserNewPage() {
       email: data.email || undefined,
       mobile: data.mobile,
       password: data.password || undefined,
+      pin: data.pin || undefined,
       role_ids: data.role_ids,
       store_ids: data.store_ids,
     });
@@ -113,6 +117,22 @@ export function UserNewPage() {
           <div><label className="label">Mobile <span className="text-red-500">*</span></label><input {...register('mobile')} className="input-field" placeholder="Mobile number" />{errors.mobile && <p className="text-red-500 text-xs mt-1">{errors.mobile.message}</p>}</div>
           <div><label className="label">Email</label><input {...register('email')} className="input-field" placeholder="Email address" />{errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}</div>
           <div><label className="label">Password {!isEdit && <span className="text-red-500">*</span>}</label><input {...register('password')} type="password" className="input-field" placeholder={isEdit ? 'Leave blank to keep current' : 'Min 6 characters'} />{errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}</div>
+          <div>
+            <label className="label">4-Digit PIN</label>
+            <input 
+              {...register('pin')} 
+              className="input-field" 
+              placeholder={isEdit ? 'Leave blank to keep current' : '4-digit PIN'} 
+              maxLength={4} 
+              inputMode="numeric"
+              pattern="[0-9]*"
+              onChange={(e) => {
+                e.target.value = e.target.value.replace(/[^0-9]/g, '');
+                setValue('pin', e.target.value);
+              }}
+            />
+            {errors.pin && <p className="text-red-500 text-xs mt-1">{errors.pin.message}</p>}
+          </div>
         </div>
         <div><label className="label">Roles <span className="text-red-500">*</span></label>
           <div className="flex flex-wrap gap-2">
