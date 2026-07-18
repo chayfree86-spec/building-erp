@@ -21,6 +21,7 @@ class UnitSeeder extends Seeder
             ['name' => 'Bundle', 'short_name' => 'Bdl', 'decimal_places' => 0, 'allow_fraction' => false],
             ['name' => 'Liter', 'short_name' => 'Ltr', 'decimal_places' => 2, 'allow_fraction' => true],
             ['name' => 'Box', 'short_name' => 'Box', 'decimal_places' => 0, 'allow_fraction' => false],
+            ['name' => 'Quintal', 'short_name' => 'Qtl', 'decimal_places' => 2, 'allow_fraction' => true],
         ];
 
         foreach ($units as $unit) {

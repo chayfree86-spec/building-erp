@@ -1,5 +1,7 @@
+import { useNavigate } from 'react-router-dom';
 import { MasterListPage } from '@/components/shared/MasterListPage';
 import type { FieldDef } from '@/components/shared/MasterFormModal';
+import { useUnits } from '@/features/products/api/queries';
 import { storesApi, unitsApi, categoriesApi, brandsApi, gstRatesApi, paymentModesApi } from '@/services/api-endpoints';
 import type { Store, Unit, Category, Brand, GstRate, PaymentMode } from '@/types';
 import { Store as StoreIcon, Ruler, FolderTree, Tag, Receipt, CreditCard } from 'lucide-react';
@@ -34,6 +36,8 @@ const unitFields: FieldDef[] = [
 
 const categoryFields: FieldDef[] = [
   { key: 'name', label: 'Category Name', required: true, placeholder: 'e.g. Cement' },
+  { key: 'unit_id', label: 'Default Unit', type: 'select', options: [], placeholder: 'Select default unit' },
+  { key: 'unit_ids', label: 'Allowed Units', type: 'multiselect', options: [] },
   { key: 'description', label: 'Description', type: 'textarea', placeholder: 'Optional description' },
   { key: 'status', label: 'Status', type: 'switch', defaultValue: 'active' },
 ];
@@ -91,17 +95,62 @@ export function UnitsPage() {
 }
 
 export function CategoriesPage() {
+  const navigate = useNavigate();
+  const { data: units = [] } = useUnits();
+
+  const dynamicFields = categoryFields.map(f => {
+    if (f.key === 'unit_id' || f.key === 'unit_ids') {
+      return {
+        ...f,
+        options: units.map(u => ({ value: String(u.id), label: `${u.name} (${u.short_name})` })),
+      };
+    }
+    return f;
+  });
+
   return <MasterListPage<Category>
     title="Categories" description="Manage product categories" addLabel="Add Category"
     queryKey="categories" queryFn={() => categoriesApi.list()}
     columns={[
       { key: 'name', header: 'Category', render: iconWrapper(FolderTree, 'bg-emerald-50', 'text-emerald-600') },
       { key: 'unit', header: 'Default Unit', hideOnMobile: true, render: (c) => c.unit?.short_name || '-' },
+      {
+        key: 'units',
+        header: 'Allowed Units',
+        hideOnMobile: true,
+        render: (c) => c.units && c.units.length > 0 ? c.units.map(u => u.short_name).join(', ') : '-'
+      },
+      {
+        key: 'products_count',
+        header: 'Products',
+        render: (c) => {
+          const count = c.products_count ?? 0;
+          return (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/products?category_id=${c.id}`);
+              }}
+              className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold rounded-lg text-xs cursor-pointer transition-colors"
+            >
+              {count} Product{count !== 1 ? 's' : ''}
+            </button>
+          );
+        }
+      }
     ]}
-    createFn={(d) => categoriesApi.create(d)}
-    updateFn={(id, d) => categoriesApi.update(id, d)}
+    createFn={(d) => categoriesApi.create({
+      ...d,
+      unit_id: d.unit_id ? Number(d.unit_id) : null,
+      unit_ids: Array.isArray(d.unit_ids) ? d.unit_ids.map(Number) : []
+    })}
+    updateFn={(id, d) => categoriesApi.update(id, {
+      ...d,
+      unit_id: d.unit_id ? Number(d.unit_id) : null,
+      unit_ids: Array.isArray(d.unit_ids) ? d.unit_ids.map(Number) : []
+    })}
     deleteFn={(id) => categoriesApi.remove(id)}
-    formFields={categoryFields}
+    formFields={dynamicFields}
     searchPlaceholder="Search categories..."
   />;
 }

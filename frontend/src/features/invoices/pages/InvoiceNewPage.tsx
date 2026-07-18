@@ -8,15 +8,16 @@ import { ArrowLeft, Plus, Trash2, Loader2, Save, UserPlus, X, ShoppingCart, User
 import toast from 'react-hot-toast';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { DatePicker } from '@/components/ui/DatePicker';
-import { salesApi, productsApi, customersApi, stockApi } from '@/services/api-endpoints';
+import { salesApi, productsApi, customersApi, stockApi, categoriesApi } from '@/services/api-endpoints';
 import { useAuth } from '@/features/auth/auth-context';
 import { formatCurrency } from '@/utils/format';
 import { handleFormKeyDown } from '@/utils/formNavigation';
-import type { Product, Customer } from '@/types';
+import type { Product, Customer, Category } from '@/types';
 
 // ─── Schema ───
 const itemSchema = z.object({
   product_id: z.number().min(1, 'Required'),
+  unit_id: z.number().optional().default(0),
   quantity: z.number().min(0.001, 'Min 0.001'),
   rate: z.number().min(0, 'Min 0'),
   gst_rate: z.number().min(0).default(0),
@@ -105,8 +106,14 @@ export function InvoiceNewPage() {
     staleTime: 5 * 60 * 1000, // 5 min — prevent refetch during session
   });
 
+  const { data: categoriesData } = useQuery({
+    queryKey: ['categories-list'],
+    queryFn: async () => { const { data } = await categoriesApi.list(); return data.data || []; },
+  });
+
   const customers: Customer[] = Array.isArray(customersData) ? customersData : [];
   const products: Product[] = Array.isArray(productsData) ? productsData : [];
+  const categories: Category[] = Array.isArray(categoriesData) ? categoriesData : [];
 
   const createMutation = useMutation({
     mutationFn: (payload: any) => salesApi.create(payload),
@@ -152,7 +159,7 @@ export function InvoiceNewPage() {
     total: acc.total + (Number(item.line_total) || 0),
   }), { subtotal: 0, discount: 0, taxable: 0, tax: 0, total: 0 });
 
-  const addItem = () => setItems([...items, { product_id: 0, quantity: 1, rate: 0, gst_rate: 0, discount_amount: 0, taxable_amount: 0, tax_amount: 0, line_total: 0 }]);
+  const addItem = () => setItems([...items, { product_id: 0, unit_id: 0, quantity: 1, rate: 0, gst_rate: 0, discount_amount: 0, taxable_amount: 0, tax_amount: 0, line_total: 0 }]);
   const removeItem = (i: number) => setItems(items.filter((_, idx) => idx !== i));
 
   const updateItem = (index: number, field: string, value: any) => {
@@ -163,6 +170,9 @@ export function InvoiceNewPage() {
         const product = products.find(p => p.id === Number(value));
         const gstRate = (product as any)?.gst_rate;
         if (gstRate?.rate) item.gst_rate = Number(gstRate.rate) || 0;
+        if (product) {
+          item.unit_id = product.unit_id || 0;
+        }
         const pid = Number(value);
         if (pid) {
           stockApi.productStock(pid).then(({ data }: any) => {
@@ -183,7 +193,7 @@ export function InvoiceNewPage() {
       }
       updated[index] = recalcItem(item);
       if (field === 'product_id' && Number(value) > 0 && index === prev.length - 1) {
-        updated.push({ product_id: 0, quantity: 1, rate: 0, gst_rate: 0, discount_amount: 0, taxable_amount: 0, tax_amount: 0, line_total: 0 });
+        updated.push({ product_id: 0, unit_id: 0, quantity: 1, rate: 0, gst_rate: 0, discount_amount: 0, taxable_amount: 0, tax_amount: 0, line_total: 0 });
       }
       return updated;
     });
@@ -221,6 +231,7 @@ export function InvoiceNewPage() {
       total_amount: Math.round(vTotals.total * 100) / 100,
       items: validItems.map(item => ({
         product_id: item.product_id,
+        unit_id: item.unit_id ? Number(item.unit_id) : null,
         quantity: Number(item.quantity) || 0,
         rate: Number(item.rate) || 0,
         discount_amount: Number(item.discount_amount) || 0,
@@ -315,6 +326,7 @@ export function InvoiceNewPage() {
                   <tr className="border-b text-left text-neutral-500">
                     <th className="pb-2 w-8 px-2">#</th>
                     <th className="pb-2 px-2">Product</th>
+                    <th className="pb-2 font-medium w-28 px-2">Unit</th>
                     <th className="pb-2 text-right w-20 px-2">Qty</th>
                     <th className="pb-2 text-right w-24 px-2">Rate</th>
                     <th className="pb-2 text-right w-20 px-2">Disc.</th>
@@ -325,27 +337,51 @@ export function InvoiceNewPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((item, idx) => (
-                    <tr key={idx} className="border-b border-neutral-100 hover:bg-neutral-50">
-                      <td className="py-3 px-2 text-neutral-400 align-middle">{idx + 1}</td>
-                      <td className="py-3 px-2 align-middle overflow-visible">
-                        <SearchableSelect
-                          compact
-                          options={products.map(p => ({ value: p.id, label: p.name }))}
-                          value={item.product_id || ''}
-                          onChange={(val) => updateItem(idx, 'product_id', Number(val))}
-                          placeholder="Select..."
-                        />
-                      </td>
-                      <td className="py-3 px-2 align-middle"><input type="number" className="input-field w-full text-right text-sm" min="0.001" step="0.001" value={item.quantity || ''} onChange={(e) => updateItem(idx, 'quantity', Number(e.target.value))} /></td>
-                      <td className="py-3 px-2 align-middle"><input type="number" className="input-field w-full text-right text-sm" min="0" step="0.01" value={item.rate || ''} onChange={(e) => updateItem(idx, 'rate', Number(e.target.value))} /></td>
-                      <td className="py-3 px-2 align-middle"><input type="number" className="input-field w-full text-right text-sm" min="0" step="0.01" value={item.discount_amount || ''} onChange={(e) => updateItem(idx, 'discount_amount', Number(e.target.value))} /></td>
-                      <td className="py-3 px-2 align-middle"><input type="number" className="input-field w-full text-right text-sm" min="0" step="0.01" value={item.gst_rate || ''} onChange={(e) => updateItem(idx, 'gst_rate', Number(e.target.value))} /></td>
-                      <td className="py-3 px-2 text-right tabular-nums text-neutral-600 align-middle">{formatCurrency(item.tax_amount)}</td>
-                      <td className="py-3 px-2 text-right font-semibold tabular-nums align-middle">{formatCurrency(item.line_total)}</td>
-                      <td className="py-3 align-middle"><button type="button" onClick={() => removeItem(idx)} className="p-1 text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button></td>
-                    </tr>
-                  ))}
+                  {items.map((item, idx) => {
+                    const product = products.find(p => p.id === Number(item.product_id));
+                    const category = product ? categories.find(c => Number(c.id) === Number(product.category_id)) : null;
+                    const allowedUnits = category?.units || [];
+                    const unitOptions = allowedUnits.length > 0
+                      ? allowedUnits.map((u: any) => ({ value: u.id, label: u.short_name }))
+                      : (product?.unit ? [{ value: product.unit.id, label: product.unit.short_name }] : []);
+
+                    return (
+                      <tr key={idx} className="border-b border-neutral-100 hover:bg-neutral-50">
+                        <td className="py-3 px-2 text-neutral-400 align-middle">{idx + 1}</td>
+                        <td className="py-3 px-2 align-middle overflow-visible">
+                          <SearchableSelect
+                            compact
+                            options={products.map(p => ({ value: p.id, label: p.name }))}
+                            value={item.product_id || ''}
+                            onChange={(val) => updateItem(idx, 'product_id', Number(val))}
+                            placeholder="Select..."
+                          />
+                        </td>
+                        <td className="py-3 px-2 align-middle">
+                          <select
+                            className="input-field w-full text-sm py-1 px-2 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-white"
+                            value={item.unit_id || ''}
+                            onChange={(e) => updateItem(idx, 'unit_id', Number(e.target.value))}
+                            disabled={!item.product_id}
+                          >
+                            <option value="">Select...</option>
+                            {unitOptions.map((o) => (
+                              <option key={o.value} value={o.value}>
+                                {o.label}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="py-3 px-2 align-middle"><input type="number" className="input-field w-full text-right text-sm" min="0.001" step="0.001" value={item.quantity || ''} onChange={(e) => updateItem(idx, 'quantity', Number(e.target.value))} /></td>
+                        <td className="py-3 px-2 align-middle"><input type="number" className="input-field w-full text-right text-sm" min="0" step="0.01" value={item.rate || ''} onChange={(e) => updateItem(idx, 'rate', Number(e.target.value))} /></td>
+                        <td className="py-3 px-2 align-middle"><input type="number" className="input-field w-full text-right text-sm" min="0" step="0.01" value={item.discount_amount || ''} onChange={(e) => updateItem(idx, 'discount_amount', Number(e.target.value))} /></td>
+                        <td className="py-3 px-2 align-middle"><input type="number" className="input-field w-full text-right text-sm" min="0" step="0.01" value={item.gst_rate || ''} onChange={(e) => updateItem(idx, 'gst_rate', Number(e.target.value))} /></td>
+                        <td className="py-3 px-2 text-right tabular-nums text-neutral-600 align-middle">{formatCurrency(item.tax_amount)}</td>
+                        <td className="py-3 px-2 text-right font-semibold tabular-nums align-middle">{formatCurrency(item.line_total)}</td>
+                        <td className="py-3 align-middle"><button type="button" onClick={() => removeItem(idx)} className="p-1 text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button></td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

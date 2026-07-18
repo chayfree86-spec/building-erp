@@ -60,7 +60,7 @@ export function SupplierPaymentNewPage() {
   const paymentAmount = watch('amount');
 
   const { data: suppliersData } = useQuery({
-    queryKey: ['suppliers-list'],
+    queryKey: ['suppliers'],
     queryFn: async () => { const { data } = await suppliersApi.list(); return data.data || []; },
   });
   const { data: paymentModes } = useQuery({

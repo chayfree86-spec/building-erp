@@ -10,14 +10,16 @@ import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { MasterFormModal, type FieldDef } from '@/components/shared/MasterFormModal';
 import { useSuppliers } from '@/features/customers/api/queries';
+import { useCategories } from '@/features/products/api/queries';
 import { suppliersApi } from '@/services/api-endpoints';
 import { formatCurrency } from '@/utils/format';
 import { Search, RotateCcw, Truck, Pencil, Trash2, Plus, CreditCard } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { Supplier } from '@/types';
 
-const supplierFields: FieldDef[] = [
+const baseSupplierFields: FieldDef[] = [
   { key: 'name', label: 'Supplier Name', required: true, placeholder: 'Company or individual name' },
+  { key: 'category_id', label: 'Supplier Category', type: 'select', options: [], placeholder: 'Select category' },
   { key: 'mobile', label: 'Mobile', required: true, placeholder: '10-digit mobile number' },
   { key: 'email', label: 'Email', placeholder: 'supplier@example.com' },
   { key: 'gst_number', label: 'GST Number', placeholder: 'GSTIN' },
@@ -41,9 +43,22 @@ export function SuppliersPage() {
   const raw = (data as any)?.data;
   const suppliers = Array.isArray(raw) ? raw : (raw?.data || []);
 
+  const { data: categories = [] } = useCategories();
+
+  const dynamicFields = baseSupplierFields.map(f => {
+    if (f.key === 'category_id') {
+      return {
+        ...f,
+        options: categories.map(c => ({ value: String(c.id), label: c.name })),
+      };
+    }
+    return f;
+  });
+
   const handleSave = async (formData: Record<string, any>) => {
     const payload = {
       ...formData,
+      category_id: formData.category_id ? Number(formData.category_id) : null,
       opening_balance: Number(formData.opening_balance) || 0,
     };
     if (editingItem?.id) { await suppliersApi.update(editingItem.id, payload); toast.success('Supplier updated'); }
@@ -72,7 +87,18 @@ export function SuppliersPage() {
           data={suppliers} keyExtractor={s => s.id}
           columns={[
             { key: 'name', header: 'Supplier', render: (s: Supplier) => (
-              <div className="flex items-center gap-3"><div className="w-9 h-9 rounded-lg bg-cyan-50 flex items-center justify-center"><Truck className="w-4 h-4 text-cyan-600" /></div><div><p className="font-medium text-neutral-900">{s.name}</p><p className="text-xs text-neutral-500">{s.mobile || 'No mobile'}</p></div></div>
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-cyan-50 flex items-center justify-center">
+                  <Truck className="w-4 h-4 text-cyan-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-neutral-900">{s.name}</p>
+                  <p className="text-xs text-neutral-500">
+                    {s.mobile || 'No mobile'}
+                    {s.category && ` | ${s.category.name}`}
+                  </p>
+                </div>
+              </div>
             )},
             { key: 'gst', header: 'GST', hideOnMobile: true, render: (s: Supplier) => s.gst_number || '-' },
             { key: 'balance', header: 'Outstanding', className: 'text-right tabular-nums', render: (s: Supplier) => <span className="text-cyan-600 font-semibold">{formatCurrency(s.opening_balance)}</span> },
@@ -88,7 +114,7 @@ export function SuppliersPage() {
           onRowClick={s => navigate(`/suppliers/${s.id}`)}
         />
       )}
-      <MasterFormModal open={modalOpen} onClose={() => { setModalOpen(false); setEditingItem(null); }} title={editingItem ? 'Edit Supplier' : 'Add Supplier'} fields={supplierFields} initialData={editingItem as any} onSave={handleSave} onSuccess={() => queryClient.invalidateQueries({ queryKey: ['suppliers'] })} />
+      <MasterFormModal open={modalOpen} onClose={() => { setModalOpen(false); setEditingItem(null); }} title={editingItem ? 'Edit Supplier' : 'Add Supplier'} fields={dynamicFields} initialData={editingItem as any} onSave={handleSave} onSuccess={() => queryClient.invalidateQueries({ queryKey: ['suppliers'] })} />
     </div>
   );
 }

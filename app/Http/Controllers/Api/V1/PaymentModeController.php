@@ -60,10 +60,10 @@ class PaymentModeController extends Controller
     public function destroy(int $id): JsonResponse
     {
         $paymentMode = PaymentMode::findOrFail($id);
-        $paymentMode->update(['is_active' => false]);
+        $paymentMode->delete();
 
         return response()->json([
-            'success' => true, 'message' => 'Payment mode deactivated.',
+            'success' => true, 'message' => 'Payment mode deleted.',
             'data' => null, 'errors' => null,
         ]);
     }

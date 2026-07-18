@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { DataTable } from '@/components/ui/DataTable';
@@ -32,32 +32,108 @@ const productFields: FieldDef[] = [
 export function ProductsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState('');
-  const [categoryId, setCategoryId] = useState('');
-  const [brandId, setBrandId] = useState('');
-  const [status, setStatus] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const [search, setSearch] = useState(searchParams.get('search') || '');
+  const categoryId = searchParams.get('category_id') || '';
+  const brandId = searchParams.get('brand_id') || '';
+  const status = searchParams.get('status') || '';
+
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
 
-  const { data: products, isLoading, isError, refetch } = useProducts({ search: search || undefined, category_id: categoryId || undefined, brand_id: brandId || undefined, status: status || undefined });
+  useEffect(() => {
+    setSearch(searchParams.get('search') || '');
+  }, [searchParams]);
+
+  const params: Record<string, any> = {};
+  if (search) params.search = search;
+  if (categoryId) params.category_id = Number(categoryId);
+  if (brandId) params.brand_id = Number(brandId);
+  if (status) params.status = status;
+
+  const { data: products, isLoading, isError, refetch } = useProducts(params);
   const { data: categories } = useCategories();
   const { data: brands } = useBrands();
   const { data: units } = useUnits();
   const { data: gstRates } = useGstRates();
 
-  const resetFilters = () => { setSearch(''); setCategoryId(''); setBrandId(''); setStatus(''); };
+  const resetFilters = () => {
+    setSearch('');
+    setSearchParams({});
+  };
+
+  const handleCategoryChange = (val: string) => {
+    if (val) {
+      searchParams.set('category_id', val);
+    } else {
+      searchParams.delete('category_id');
+    }
+    setSearchParams(searchParams);
+  };
+
+  const handleBrandChange = (val: string) => {
+    if (val) {
+      searchParams.set('brand_id', val);
+    } else {
+      searchParams.delete('brand_id');
+    }
+    setSearchParams(searchParams);
+  };
+
+  const handleStatusChange = (val: string) => {
+    if (val) {
+      searchParams.set('status', val);
+    } else {
+      searchParams.delete('status');
+    }
+    setSearchParams(searchParams);
+  };
+
+  const handleSearchChange = (val: string) => {
+    setSearch(val);
+    if (val) {
+      searchParams.set('search', val);
+    } else {
+      searchParams.delete('search');
+    }
+    setSearchParams(searchParams);
+  };
+
   const productList = Array.isArray(products) ? products : [];
 
   // Dropdown options from masters
   const catOptions = (categories || []).map((c: any) => ({ value: String(c.id), label: c.name }));
   const brandOptions = (brands || []).map((b: any) => ({ value: String(b.id), label: b.name }));
-  const unitOptions = (units || []).map((u: any) => ({ value: String(u.id), label: `${u.name} (${u.short_name})` }));
   const gstOptions = (gstRates || []).map((g: any) => ({ value: String(g.id), label: `${g.name} (${Number(g.rate)}%)` }));
 
   const fieldsWithOptions = productFields.map(f => {
     if (f.key === 'category_id') return { ...f, options: catOptions };
-    if (f.key === 'unit_id') return { ...f, options: unitOptions };
+    if (f.key === 'unit_id') {
+      return {
+        ...f,
+        options: (formData: Record<string, any>) => {
+          const selectedCatId = Number(formData.category_id);
+          const catList = Array.isArray(categories) ? categories : [];
+          const unitList = Array.isArray(units) ? units : [];
+
+          if (selectedCatId) {
+            const cat = catList.find(c => c.id === selectedCatId);
+            if (cat && cat.units && cat.units.length > 0) {
+              return cat.units.map(u => ({ value: String(u.id), label: `${u.name} (${u.short_name})` }));
+            }
+            if (cat && cat.unit_id) {
+              const u = unitList.find(unit => unit.id === cat.unit_id);
+              if (u) {
+                return [{ value: String(u.id), label: `${u.name} (${u.short_name})` }];
+              }
+            }
+          }
+          return unitList.map(u => ({ value: String(u.id), label: `${u.name} (${u.short_name})` }));
+        }
+      };
+    }
     if (f.key === 'brand_id') return { ...f, options: brandOptions };
     if (f.key === 'gst_rate_id') return { ...f, options: gstOptions };
     return f;
@@ -108,11 +184,11 @@ export function ProductsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, SKU, barcode..." className="input-field has-icon" />
+            <input value={search} onChange={e => handleSearchChange(e.target.value)} placeholder="Search name, SKU, barcode..." className="input-field has-icon" />
           </div>
-          <SearchableSelect placeholder="All Categories" options={catOptions} value={categoryId} onChange={setCategoryId} />
-          <SearchableSelect placeholder="All Brands" options={brandOptions} value={brandId} onChange={setBrandId} />
-          <SearchableSelect placeholder="All Status" options={[{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }]} value={status} onChange={setStatus} />
+          <SearchableSelect placeholder="All Categories" options={catOptions} value={categoryId} onChange={handleCategoryChange} />
+          <SearchableSelect placeholder="All Brands" options={brandOptions} value={brandId} onChange={handleBrandChange} />
+          <SearchableSelect placeholder="All Status" options={[{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }]} value={status} onChange={handleStatusChange} />
           <Button variant="ghost" icon={RotateCcw} onClick={resetFilters}>Reset</Button>
         </div>
       </div>

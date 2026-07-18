@@ -100,10 +100,10 @@ class ProductController extends Controller
     public function destroy(int $id): JsonResponse
     {
         $product = Product::findOrFail($id);
-        $product->update(['status' => 'inactive']);
+        $product->delete();
 
         return response()->json([
-            'success' => true, 'message' => 'Product deactivated.',
+            'success' => true, 'message' => 'Product deleted.',
             'data' => null, 'errors' => null,
         ]);
     }

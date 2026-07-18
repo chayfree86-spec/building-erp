@@ -68,10 +68,10 @@ class GstRateController extends Controller
     public function destroy(int $id): JsonResponse
     {
         $gstRate = GstRate::findOrFail($id);
-        $gstRate->update(['status' => 'inactive']);
+        $gstRate->delete();
 
         return response()->json([
-            'success' => true, 'message' => 'GST rate deactivated.',
+            'success' => true, 'message' => 'GST rate deleted.',
             'data' => null, 'errors' => null,
         ]);
     }

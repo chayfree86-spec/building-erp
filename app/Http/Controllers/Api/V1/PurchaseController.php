@@ -148,7 +148,7 @@ class PurchaseController extends Controller
 
     public function show(int $id): JsonResponse
     {
-        $purchase = Purchase::with(['items', 'supplier', 'store', 'batches', 'createdBy'])->findOrFail($id);
+        $purchase = Purchase::with(['items.product.unit', 'items.unit', 'supplier', 'store', 'batches', 'createdBy'])->findOrFail($id);
 
         return response()->json([
             'success' => true,

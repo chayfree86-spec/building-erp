@@ -13,15 +13,21 @@ class Supplier extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'name', 'mobile', 'normalized_mobile', 'alternate_mobile', 'email',
+        'name', 'category_id', 'mobile', 'normalized_mobile', 'alternate_mobile', 'email',
         'gst_number', 'opening_balance', 'opening_balance_type',
         'status', 'created_by', 'updated_by',
     ];
 
     protected $casts = [
+        'category_id' => 'integer',
         'opening_balance' => 'decimal:2',
         'status' => 'string',
     ];
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
+    }
 
     public function createdBy(): BelongsTo
     {

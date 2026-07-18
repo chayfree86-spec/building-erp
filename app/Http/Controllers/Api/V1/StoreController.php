@@ -74,10 +74,10 @@ class StoreController extends Controller
     public function destroy(int $id): JsonResponse
     {
         $store = Store::findOrFail($id);
-        $store->update(['status' => 'inactive']);
+        $store->delete();
 
         return response()->json([
-            'success' => true, 'message' => 'Store deactivated.',
+            'success' => true, 'message' => 'Store deleted.',
             'data' => null, 'errors' => null,
         ]);
     }

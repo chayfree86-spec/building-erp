@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Loader2, Phone, MapPin, FileText, ShoppingCart, CreditCard, TrendingUp, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
@@ -82,8 +82,9 @@ export function SupplierDetailPage() {
           {supplier.email && <p className="text-sm text-neutral-500">{supplier.email}</p>}
         </div>
         <div className="card p-4">
-          <div className="flex items-center gap-2 text-neutral-500 text-sm mb-2"><FileText className="w-4 h-4" /> GST</div>
+          <div className="flex items-center gap-2 text-neutral-500 text-sm mb-2"><FileText className="w-4 h-4" /> GST / Category</div>
           <p className="font-semibold">{supplier.gst_number || 'Not registered'}</p>
+          {supplier.category && <p className="text-sm text-primary-600 font-medium">{supplier.category.name}</p>}
         </div>
         <div className="card p-4">
           <div className="flex items-center gap-2 text-neutral-500 text-sm mb-2"><MapPin className="w-4 h-4" /> Address</div>

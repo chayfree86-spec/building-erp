@@ -13,7 +13,7 @@ class CategoryController extends Controller
     {
         return response()->json([
             'success' => true, 'message' => 'Categories retrieved.',
-            'data' => Category::with('unit')->get(), 'errors' => null,
+            'data' => Category::with(['unit', 'units'])->withCount('products')->get(), 'errors' => null,
         ]);
     }
 
@@ -22,15 +22,21 @@ class CategoryController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:200',
             'unit_id' => 'nullable|exists:units,id',
+            'unit_ids' => 'nullable|array',
+            'unit_ids.*' => 'exists:units,id',
             'description' => 'nullable|string',
             'status' => 'sometimes|in:active,inactive',
         ]);
 
-        $category = Category::create($validated + ['created_by' => $request->user()->id]);
+        $category = Category::create(collect($validated)->except(['unit_ids'])->toArray() + ['created_by' => $request->user()->id]);
+
+        if ($request->has('unit_ids')) {
+            $category->units()->sync($request->unit_ids);
+        }
 
         return response()->json([
             'success' => true, 'message' => 'Category created.',
-            'data' => $category->load('unit'), 'errors' => null,
+            'data' => $category->load(['unit', 'units']), 'errors' => null,
         ], 201);
     }
 
@@ -38,7 +44,7 @@ class CategoryController extends Controller
     {
         return response()->json([
             'success' => true, 'message' => 'Category retrieved.',
-            'data' => Category::with('unit')->findOrFail($id), 'errors' => null,
+            'data' => Category::with(['unit', 'units'])->findOrFail($id), 'errors' => null,
         ]);
     }
 
@@ -46,26 +52,34 @@ class CategoryController extends Controller
     {
         $category = Category::findOrFail($id);
 
-        $category->update($request->validate([
+        $validated = $request->validate([
             'name' => 'sometimes|string|max:200',
             'unit_id' => 'nullable|exists:units,id',
+            'unit_ids' => 'nullable|array',
+            'unit_ids.*' => 'exists:units,id',
             'description' => 'nullable|string',
             'status' => 'sometimes|in:active,inactive',
-        ]));
+        ]);
+
+        $category->update(collect($validated)->except(['unit_ids'])->toArray());
+
+        if ($request->has('unit_ids')) {
+            $category->units()->sync($request->unit_ids);
+        }
 
         return response()->json([
             'success' => true, 'message' => 'Category updated.',
-            'data' => $category->load('unit'), 'errors' => null,
+            'data' => $category->load(['unit', 'units']), 'errors' => null,
         ]);
     }
 
     public function destroy(int $id): JsonResponse
     {
         $category = Category::findOrFail($id);
-        $category->update(['status' => 'inactive']);
+        $category->delete();
 
         return response()->json([
-            'success' => true, 'message' => 'Category deactivated.',
+            'success' => true, 'message' => 'Category deleted.',
             'data' => null, 'errors' => null,
         ]);
     }

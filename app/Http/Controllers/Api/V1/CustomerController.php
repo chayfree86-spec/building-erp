@@ -96,10 +96,10 @@ class CustomerController extends Controller
     public function destroy(int $id): JsonResponse
     {
         $customer = Customer::findOrFail($id);
-        $customer->update(['status' => 'inactive']);
+        $customer->delete();
 
         return response()->json([
-            'success' => true, 'message' => 'Customer deactivated.',
+            'success' => true, 'message' => 'Customer deleted.',
             'data' => null, 'errors' => null,
         ]);
     }

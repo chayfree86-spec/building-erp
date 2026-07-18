@@ -60,10 +60,10 @@ class BrandController extends Controller
     public function destroy(int $id): JsonResponse
     {
         $brand = Brand::findOrFail($id);
-        $brand->update(['status' => 'inactive']);
+        $brand->delete();
 
         return response()->json([
-            'success' => true, 'message' => 'Brand deactivated.',
+            'success' => true, 'message' => 'Brand deleted.',
             'data' => null, 'errors' => null,
         ]);
     }

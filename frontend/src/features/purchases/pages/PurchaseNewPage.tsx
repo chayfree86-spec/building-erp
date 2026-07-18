@@ -8,15 +8,15 @@ import { ArrowLeft, Plus, Trash2, Loader2, Save, Send, Calculator, Truck, X } fr
 import toast from 'react-hot-toast';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { DatePicker } from '@/components/ui/DatePicker';
-import { purchasesApi, productsApi, suppliersApi, storesApi, stockApi } from '@/services/api-endpoints';
+import { purchasesApi, productsApi, suppliersApi, storesApi, stockApi, categoriesApi } from '@/services/api-endpoints';
 import { useAuth } from '@/features/auth/auth-context';
 import { formatCurrency } from '@/utils/format';
 import { handleFormKeyDown } from '@/utils/formNavigation';
-import type { Product, Supplier, GstRate } from '@/types';
+import type { Product, Supplier, GstRate, Category } from '@/types';
 
-// ─── Schema ───
 const itemSchema = z.object({
   product_id: z.number().min(1, 'Product is required'),
+  unit_id: z.number().optional().default(0),
   quantity: z.number().min(0.001, 'Min 0.001'),
   purchase_price: z.number().min(0, 'Min 0'),
   selling_price: z.number().min(0).optional().default(0),
@@ -67,6 +67,7 @@ export function PurchaseNewPage() {
   const [quickMobile, setQuickMobile] = useState('');
   const [quickEmail, setQuickEmail] = useState('');
   const [quickGst, setQuickGst] = useState('');
+  const [quickCategoryId, setQuickCategoryId] = useState<number | null>(null);
   const [quickSaving, setQuickSaving] = useState(false);
 
   const quickAddSupplier = async () => {
@@ -75,6 +76,7 @@ export function PurchaseNewPage() {
     try {
       const { data } = await suppliersApi.create({
         name: quickName.trim(),
+        category_id: quickCategoryId,
         mobile: quickMobile.trim() || null,
         email: quickEmail.trim() || null,
         gst_number: quickGst.trim() || null,
@@ -84,11 +86,11 @@ export function PurchaseNewPage() {
       });
       const newSup = data.data || data;
       toast.success('Supplier added!');
-      queryClient.invalidateQueries({ queryKey: ['suppliers-list'] });
+      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
       setValue('supplier_id', newSup.id);
       setSelectedSupplier(newSup);
       setShowQuickAdd(false);
-      setQuickName(''); setQuickMobile(''); setQuickEmail(''); setQuickGst('');
+      setQuickName(''); setQuickMobile(''); setQuickEmail(''); setQuickGst(''); setQuickCategoryId(null);
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Failed to add supplier');
     } finally {
@@ -98,7 +100,7 @@ export function PurchaseNewPage() {
 
   // Fetch data
   const { data: suppliersData } = useQuery({
-    queryKey: ['suppliers-list'],
+    queryKey: ['suppliers'],
     queryFn: async () => { const { data } = await suppliersApi.list(); return data.data || []; },
   });
   const { data: productsData } = useQuery({
@@ -113,9 +115,18 @@ export function PurchaseNewPage() {
     },
     staleTime: 5 * 60 * 1000,
   });
+  const { data: categoriesData } = useQuery({
+    queryKey: ['categories-list'],
+    queryFn: async () => { const { data } = await categoriesApi.list(); return data.data || []; },
+  });
 
   const suppliers: Supplier[] = Array.isArray(suppliersData) ? suppliersData : [];
   const products: Product[] = Array.isArray(productsData) ? productsData : [];
+  const categories: Category[] = Array.isArray(categoriesData) ? categoriesData : [];
+
+  const filteredProducts = selectedSupplier?.category_id
+    ? products.filter(p => Number(p.category_id) === Number(selectedSupplier.category_id))
+    : products;
 
   // Create mutation
   const createMutation = useMutation({
@@ -174,6 +185,7 @@ export function PurchaseNewPage() {
   const addItem = () => {
     setItems([...items, {
       product_id: 0,
+      unit_id: 0,
       quantity: 1,
       purchase_price: 0,
       selling_price: 0,
@@ -199,6 +211,9 @@ export function PurchaseNewPage() {
         if (gstRate?.rate) {
           item.gst_rate = Number(gstRate.rate) || 0;
         }
+        if (product) {
+          item.unit_id = product.unit_id || 0;
+        }
         // Auto-fill selling price from the product's most recent batch (editable).
         const pid = Number(value);
         if (pid) {
@@ -220,7 +235,7 @@ export function PurchaseNewPage() {
       }
       updated[index] = recalcItem(item);
       if (field === 'product_id' && Number(value) > 0 && index === prev.length - 1) {
-        updated.push({ product_id: 0, quantity: 1, purchase_price: 0, selling_price: 0, gst_rate: 0, discount_amount: 0, taxable_amount: 0, tax_amount: 0, line_total: 0 });
+        updated.push({ product_id: 0, unit_id: 0, quantity: 1, purchase_price: 0, selling_price: 0, gst_rate: 0, discount_amount: 0, taxable_amount: 0, tax_amount: 0, line_total: 0 });
       }
       return updated;
     });
@@ -248,6 +263,7 @@ export function PurchaseNewPage() {
       total_amount: Math.round(totals.total * 100) / 100,
       items: validItems.map(item => ({
         product_id: item.product_id,
+        unit_id: item.unit_id ? Number(item.unit_id) : null,
         quantity: Number(item.quantity) || 0,
         purchase_price: Number(item.purchase_price) || 0,
         selling_price: Number(item.selling_price) || 0,
@@ -339,6 +355,11 @@ export function PurchaseNewPage() {
                   <div className="flex items-center gap-3 text-xs text-neutral-500 mt-0.5">
                     {selectedSupplier.mobile && <span>{selectedSupplier.mobile}</span>}
                     <span>GST: {selectedSupplier.gst_number || 'N/A'}</span>
+                    {selectedSupplier.category && (
+                      <span className="px-2 py-0.5 bg-orange-100 text-orange-800 rounded-md font-medium text-[10px]">
+                        Category: {selectedSupplier.category.name}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -349,7 +370,14 @@ export function PurchaseNewPage() {
         {/* Items */}
         <div className="card p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-neutral-900">Items</h2>
+            <div>
+              <h2 className="text-lg font-semibold text-neutral-900">Items</h2>
+              {selectedSupplier.category && (
+                <p className="text-xs text-neutral-500 mt-0.5">
+                  Showing items related to <span className="font-semibold text-orange-600">{selectedSupplier.category.name}</span>
+                </p>
+              )}
+            </div>
             <button type="button" onClick={addItem} className="btn btn-primary flex items-center gap-2 text-sm">
               <Plus className="w-4 h-4" /> Add Item
             </button>
@@ -366,6 +394,7 @@ export function PurchaseNewPage() {
                   <tr className="border-b text-left text-neutral-500">
                     <th className="pb-2 font-medium w-8 px-2">#</th>
                     <th className="pb-2 font-medium px-2">Product</th>
+                    <th className="pb-2 font-medium w-28 px-2">Unit</th>
                     <th className="pb-2 font-medium text-right w-20 px-2">Qty</th>
                     <th className="pb-2 font-medium text-right w-28 px-2">Purch. Price</th>
                     <th className="pb-2 font-medium text-right w-28 px-2">Selling Price</th>
@@ -379,17 +408,38 @@ export function PurchaseNewPage() {
                 <tbody>
                   {items.map((item, idx) => {
                     const product = products.find(p => p.id === Number(item.product_id));
+                    const category = product ? categories.find(c => Number(c.id) === Number(product.category_id)) : null;
+                    const allowedUnits = category?.units || [];
+                    const unitOptions = allowedUnits.length > 0
+                      ? allowedUnits.map((u: any) => ({ value: u.id, label: u.short_name }))
+                      : (product?.unit ? [{ value: product.unit.id, label: product.unit.short_name }] : []);
+
                     return (
                       <tr key={idx} className="border-b border-neutral-100 hover:bg-neutral-50">
                         <td className="py-3 px-2 text-neutral-400 align-middle">{idx + 1}</td>
                         <td className="py-3 px-2 align-middle overflow-visible">
                           <SearchableSelect
                             compact
-                            options={products.map(p => ({ value: p.id, label: p.name, sub: p.sku || '' }))}
+                            options={filteredProducts.map(p => ({ value: p.id, label: p.name, sub: p.sku || '' }))}
                             value={item.product_id || ''}
                             onChange={(val) => updateItem(idx, 'product_id', Number(val))}
                             placeholder="Select..."
                           />
+                        </td>
+                        <td className="py-3 px-2 align-middle">
+                          <select
+                            className="input-field w-full text-sm py-1 px-2 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-white"
+                            value={item.unit_id || ''}
+                            onChange={(e) => updateItem(idx, 'unit_id', Number(e.target.value))}
+                            disabled={!item.product_id}
+                          >
+                            <option value="">Select...</option>
+                            {unitOptions.map((o) => (
+                              <option key={o.value} value={o.value}>
+                                {o.label}
+                              </option>
+                            ))}
+                          </select>
                         </td>
                         <td className="py-3 px-2 align-middle">
                           <input
@@ -513,6 +563,15 @@ export function PurchaseNewPage() {
               <div>
                 <label className="label">Name <span className="text-red-500">*</span></label>
                 <input type="text" className="input-field w-full" placeholder="Supplier name" value={quickName} onChange={e => setQuickName(e.target.value)} autoFocus onKeyDown={e => e.key === 'Enter' && quickAddSupplier()} />
+              </div>
+              <div>
+                <label className="label">Category</label>
+                <SearchableSelect
+                  options={categories.map(c => ({ value: c.id, label: c.name }))}
+                  value={quickCategoryId || ''}
+                  onChange={(val) => setQuickCategoryId(val ? Number(val) : null)}
+                  placeholder="Select category..."
+                />
               </div>
               <div>
                 <label className="label">Mobile</label>

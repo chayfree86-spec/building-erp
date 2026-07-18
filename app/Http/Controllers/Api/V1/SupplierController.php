@@ -11,7 +11,7 @@ class SupplierController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Supplier::with('addresses');
+        $query = Supplier::with(['addresses', 'category']);
 
         if ($request->status) {
             $query->where('status', $request->status);
@@ -35,6 +35,7 @@ class SupplierController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:200',
+            'category_id' => 'nullable|integer|exists:categories,id',
             'mobile' => 'nullable|string|max:15',
             'alternate_mobile' => 'nullable|string|max:15',
             'email' => 'nullable|email|max:100',
@@ -52,7 +53,7 @@ class SupplierController extends Controller
 
         return response()->json([
             'success' => true, 'message' => 'Supplier created.',
-            'data' => $supplier->load('addresses'), 'errors' => null,
+            'data' => $supplier->load(['addresses', 'category']), 'errors' => null,
         ], 201);
     }
 
@@ -60,7 +61,7 @@ class SupplierController extends Controller
     {
         return response()->json([
             'success' => true, 'message' => 'Supplier retrieved.',
-            'data' => Supplier::with('addresses')->findOrFail($id), 'errors' => null,
+            'data' => Supplier::with(['addresses', 'category'])->findOrFail($id), 'errors' => null,
         ]);
     }
 
@@ -70,6 +71,7 @@ class SupplierController extends Controller
 
         $data = $request->validate([
             'name' => 'sometimes|string|max:200',
+            'category_id' => 'nullable|integer|exists:categories,id',
             'mobile' => 'nullable|string|max:15',
             'alternate_mobile' => 'nullable|string|max:15',
             'email' => 'nullable|email|max:100',
@@ -87,17 +89,17 @@ class SupplierController extends Controller
 
         return response()->json([
             'success' => true, 'message' => 'Supplier updated.',
-            'data' => $supplier->load('addresses'), 'errors' => null,
+            'data' => $supplier->load(['addresses', 'category']), 'errors' => null,
         ]);
     }
 
     public function destroy(int $id): JsonResponse
     {
         $supplier = Supplier::findOrFail($id);
-        $supplier->update(['status' => 'inactive']);
+        $supplier->delete();
 
         return response()->json([
-            'success' => true, 'message' => 'Supplier deactivated.',
+            'success' => true, 'message' => 'Supplier deleted.',
             'data' => null, 'errors' => null,
         ]);
     }

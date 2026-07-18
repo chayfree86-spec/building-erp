@@ -140,8 +140,12 @@ export function PurchaseDetailPage() {
                   <td className="py-3 px-2 text-neutral-400 align-middle">{idx + 1}</td>
                   <td className="py-3 px-2 font-medium align-middle">{item.product?.name || `Product #${item.product_id}`}</td>
                   <td className="py-3 px-2 text-right align-middle">
-                    {editMode ? <input type="number" className="input-field w-20 text-right text-sm" min="0.001" step="0.001" value={item.quantity} onChange={(e) => updateItem(idx, 'quantity', Number(e.target.value))} />
-                    : Number(item.quantity).toFixed(3)}</td>
+                    {editMode ? (
+                      <input type="number" className="input-field w-20 text-right text-sm" min="0.001" step="0.001" value={item.quantity} onChange={(e) => updateItem(idx, 'quantity', Number(e.target.value))} />
+                    ) : (
+                      `${Number(item.quantity).toFixed(3)} ${(item.unit?.short_name || item.product?.unit?.short_name || '')}`
+                    )}
+                  </td>
                   <td className="py-3 px-2 text-right font-mono align-middle">
                     {editMode ? <input type="number" className="input-field w-24 text-right text-sm" min="0" step="0.01" value={item.purchase_price} onChange={(e) => updateItem(idx, 'purchase_price', Number(e.target.value))} />
                     : formatCurrency(Number(item.purchase_price))}</td>

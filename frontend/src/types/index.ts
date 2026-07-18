@@ -87,6 +87,9 @@ export interface Category {
   description: string | null;
   status: 'active' | 'inactive';
   unit?: Unit;
+  units?: Unit[];
+  unit_ids?: number[];
+  products_count?: number;
 }
 
 export interface Brand {
@@ -161,6 +164,7 @@ export interface CustomerAddress {
 export interface Supplier {
   id: number;
   name: string;
+  category_id?: number | null;
   mobile: string | null;
   normalized_mobile: string | null;
   alternate_mobile: string | null;
@@ -170,6 +174,7 @@ export interface Supplier {
   opening_balance_type: 'debit' | 'credit';
   status: 'active' | 'inactive';
   addresses?: SupplierAddress[];
+  category?: Category;
 }
 
 export interface SupplierAddress {

@@ -64,6 +64,7 @@ class SalesInvoiceController extends Controller
             'remarks' => 'nullable|string',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
+            'items.*.unit_id' => 'nullable|exists:units,id',
             'items.*.quantity' => 'required|numeric|min:0.001',
             'items.*.rate' => 'required|numeric|min:0',
             'items.*.discount_amount' => 'numeric|min:0',
@@ -114,6 +115,7 @@ class SalesInvoiceController extends Controller
             SalesInvoiceItem::create([
                 'invoice_id' => $invoice->id,
                 'product_id' => $item['product_id'],
+                'unit_id' => $item['unit_id'] ?? null,
                 'quantity' => $item['quantity'],
                 'rate' => $item['rate'],
                 'discount_amount' => $item['discount_amount'] ?? 0,
@@ -151,7 +153,7 @@ class SalesInvoiceController extends Controller
     {
         return response()->json([
             'success' => true, 'message' => 'Invoice retrieved.',
-            'data' => SalesInvoice::with(['items.product', 'customer', 'store', 'batchAllocations', 'createdBy'])
+            'data' => SalesInvoice::with(['items.product.unit', 'items.unit', 'customer', 'store', 'batchAllocations', 'createdBy'])
                 ->findOrFail($id),
             'errors' => null,
         ]);

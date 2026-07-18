@@ -232,7 +232,11 @@ export function InvoiceDetailPage() {
                     ) : (item.product?.name || `Product #${item.product_id}`)}
                   </td>
                   <td className="py-3 px-2 text-right align-middle">
-                    {editMode ? <input type="number" className="input-field w-20 text-right text-sm" min="0.001" step="0.001" value={item.quantity || ''} onChange={e => editItem(idx, 'quantity', e.target.value)} /> : Number(item.quantity).toFixed(3)}
+                    {editMode ? (
+                      <input type="number" className="input-field w-20 text-right text-sm" min="0.001" step="0.001" value={item.quantity || ''} onChange={e => editItem(idx, 'quantity', e.target.value)} />
+                    ) : (
+                      `${Number(item.quantity).toFixed(3)} ${(item.unit?.short_name || item.product?.unit?.short_name || '')}`
+                    )}
                   </td>
                   <td className="py-3 px-2 text-right font-mono align-middle">
                     {editMode ? <input type="number" className="input-field w-24 text-right text-sm" min="0" step="0.01" value={item.rate || ''} onChange={e => editItem(idx, 'rate', e.target.value)} /> : formatCurrency(Number(item.rate))}

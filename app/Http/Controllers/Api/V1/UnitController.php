@@ -64,10 +64,10 @@ class UnitController extends Controller
     public function destroy(int $id): JsonResponse
     {
         $unit = Unit::findOrFail($id);
-        $unit->update(['status' => 'inactive']);
+        $unit->delete();
 
         return response()->json([
-            'success' => true, 'message' => 'Unit deactivated.',
+            'success' => true, 'message' => 'Unit deleted.',
             'data' => null, 'errors' => null,
         ]);
     }
