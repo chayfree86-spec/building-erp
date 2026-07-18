@@ -310,6 +310,7 @@ export function InvoiceDetailPage() {
                       <button type="button" onClick={() => removeEditItem(idx)} className="p-1 text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
                     </td>
                   )}
+                  </tr>
                 );
               })}
             </tbody>

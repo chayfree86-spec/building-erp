@@ -143,8 +143,8 @@ export function CustomerDetailPage() {
     // Card 4: Outstanding (Rose / Green)
     const isOwe = outstanding > 0;
     const isAdv = outstanding < 0;
-    const bgRGB = isOwe ? [255, 241, 242] : [240, 253, 244]; // rose-50 or green-50
-    const textRGB = isOwe ? [226, 92, 106] : [21, 128, 61]; // strawberry red or green-700
+    const bgRGB: [number, number, number] = isOwe ? [255, 241, 242] : [240, 253, 244]; // rose-50 or green-50
+    const textRGB: [number, number, number] = isOwe ? [226, 92, 106] : [21, 128, 61]; // strawberry red or green-700
     const labelText = isOwe ? 'Customer Owes' : isAdv ? 'Advance' : 'Settled';
     
     doc.setFillColor(...bgRGB);

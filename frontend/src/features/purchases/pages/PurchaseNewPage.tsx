@@ -68,7 +68,7 @@ export function PurchaseNewPage() {
   const [quickMobile, setQuickMobile] = useState('');
   const [quickEmail, setQuickEmail] = useState('');
   const [quickGst, setQuickGst] = useState('');
-  const [quickCategoryId, setQuickCategoryId] = useState<number | null>(null);
+  const [quickCategoryIds, setQuickCategoryIds] = useState<number[]>([]);
   const [quickSaving, setQuickSaving] = useState(false);
 
   const quickAddSupplier = async () => {
@@ -77,7 +77,7 @@ export function PurchaseNewPage() {
     try {
       const { data } = await suppliersApi.create({
         name: quickName.trim(),
-        category_id: quickCategoryId,
+        category_ids: quickCategoryIds,
         mobile: quickMobile.trim() || null,
         email: quickEmail.trim() || null,
         gst_number: quickGst.trim() || null,
@@ -91,7 +91,7 @@ export function PurchaseNewPage() {
       setValue('supplier_id', newSup.id);
       setSelectedSupplier(newSup);
       setShowQuickAdd(false);
-      setQuickName(''); setQuickMobile(''); setQuickEmail(''); setQuickGst(''); setQuickCategoryId(null);
+      setQuickName(''); setQuickMobile(''); setQuickEmail(''); setQuickGst(''); setQuickCategoryIds([]);
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Failed to add supplier');
     } finally {
@@ -125,8 +125,15 @@ export function PurchaseNewPage() {
   const products: Product[] = Array.isArray(productsData) ? productsData : [];
   const categories: Category[] = Array.isArray(categoriesData) ? categoriesData : [];
 
-  const filteredProducts = selectedSupplier?.category_id
-    ? products.filter(p => Number(p.category_id) === Number(selectedSupplier.category_id))
+  // Restrict the product list to the categories the selected supplier deals in.
+  // Prefer the many-to-many `categories`; fall back to the legacy single
+  // `category_id`; if the supplier has none, show every product.
+  const supplierCategoryIds = (selectedSupplier?.categories && selectedSupplier.categories.length > 0)
+    ? selectedSupplier.categories.map((c: any) => Number(c.id))
+    : (selectedSupplier?.category_id ? [Number(selectedSupplier.category_id)] : []);
+
+  const filteredProducts = supplierCategoryIds.length > 0
+    ? products.filter(p => supplierCategoryIds.includes(Number(p.category_id)))
     : products;
 
   // Create mutation
@@ -566,13 +573,22 @@ export function PurchaseNewPage() {
                 <input type="text" className="input-field w-full" placeholder="Supplier name" value={quickName} onChange={e => setQuickName(e.target.value)} autoFocus onKeyDown={e => e.key === 'Enter' && quickAddSupplier()} />
               </div>
               <div>
-                <label className="label">Category</label>
-                <SearchableSelect
-                  options={categories.map(c => ({ value: c.id, label: c.name }))}
-                  value={quickCategoryId || ''}
-                  onChange={(val) => setQuickCategoryId(val ? Number(val) : null)}
-                  placeholder="Select category..."
-                />
+                <label className="label">Categories</label>
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {categories.map(c => {
+                    const selected = quickCategoryIds.includes(Number(c.id));
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setQuickCategoryIds(prev => selected ? prev.filter(id => id !== Number(c.id)) : [...prev, Number(c.id)])}
+                        className={`px-2.5 py-1 rounded-lg text-xs border transition-colors ${selected ? 'bg-primary-50 border-primary-300 text-primary-700 font-medium' : 'border-neutral-200 text-neutral-600 hover:bg-neutral-50'}`}
+                      >
+                        {c.name}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
               <div>
                 <label className="label">Mobile</label>

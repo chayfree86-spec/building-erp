@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/Button';
 import { transfersApi, productsApi, stockApi, storesApi } from '@/services/api-endpoints';
 import { useAuth } from '@/features/auth/auth-context';
 import { getLocalDateString } from '@/utils/format';
+import { handleFormKeyDown } from '@/utils/formNavigation';
+import type { Product } from '@/types';
 
 const itemSchema = z.object({
   product_id: z.number().min(1, 'Product is required'),

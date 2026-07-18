@@ -182,6 +182,8 @@ export interface Supplier {
   status: 'active' | 'inactive';
   addresses?: SupplierAddress[];
   category?: Category;
+  categories?: Category[];
+  category_ids?: number[];
   outstanding_balance?: number;
 }
 
