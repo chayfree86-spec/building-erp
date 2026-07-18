@@ -18,14 +18,42 @@ class SupplierPaymentService
             throw new \RuntimeException('Only draft payments can be confirmed.');
         }
 
-        $totalAllocated = array_sum(array_column($allocations, 'allocated_amount'));
-        $advanceAmount = $payment->amount - $totalAllocated;
+        return DB::transaction(function () use ($payment, $allocations) {
+            // If allocations is empty, auto-allocate using FIFO
+            if (empty($allocations)) {
+                $outstandingPurchases = Purchase::where('supplier_id', $payment->supplier_id)
+                    ->where('store_id', $payment->store_id)
+                    ->whereIn('status', ['confirmed', 'partially_paid'])
+                    ->orderBy('purchase_date', 'asc')
+                    ->orderBy('id', 'asc')
+                    ->lockForUpdate()
+                    ->get();
 
-        if ($advanceAmount < 0) {
-            throw new \RuntimeException('Total allocation exceeds payment amount.');
-        }
+                $remainingAmount = $payment->amount;
+                foreach ($outstandingPurchases as $pur) {
+                    if ($remainingAmount <= 0) {
+                        break;
+                    }
+                    $bal = (float) $pur->balance_amount;
+                    if ($bal <= 0) {
+                        continue;
+                    }
+                    $allocAmt = min($remainingAmount, $bal);
+                    $allocations[] = [
+                        'purchase_id' => $pur->id,
+                        'allocated_amount' => $allocAmt,
+                    ];
+                    $remainingAmount -= $allocAmt;
+                }
+            }
 
-        return DB::transaction(function () use ($payment, $allocations, $totalAllocated, $advanceAmount) {
+            $totalAllocated = array_sum(array_column($allocations, 'allocated_amount'));
+            $advanceAmount = $payment->amount - $totalAllocated;
+
+            if ($advanceAmount < 0) {
+                throw new \RuntimeException('Total allocation exceeds payment amount.');
+            }
+
             $payment->update([
                 'allocated_amount' => $totalAllocated,
                 'advance_amount' => $advanceAmount,

@@ -28,14 +28,31 @@ export function PurchasesPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
+  const [actionPendingId, setActionPendingId] = useState<number | null>(null);
 
   const { data, isLoading, isError, refetch } = usePurchases({ search: search || undefined, status: status || undefined });
   const purchases = (data as any)?.items || [];
 
-  const handleCancel = async (id: number) => {
-    if (!window.confirm('Cancel this purchase?')) return;
-    try { await purchasesApi.cancel(id, 'Cancelled by user'); toast.success('Purchase cancelled'); queryClient.invalidateQueries({ queryKey: ['purchases'] }); }
-    catch (err: any) { toast.error(err?.response?.data?.message || 'Failed'); }
+  const handleStatusUpdate = async (id: number, action: 'submit' | 'approve' | 'confirm') => {
+    setActionPendingId(id);
+    try {
+      if (action === 'submit') {
+        await purchasesApi.submit(id);
+        toast.success('Purchase submitted successfully');
+      } else if (action === 'approve') {
+        await purchasesApi.approve(id);
+        toast.success('Purchase approved successfully');
+      } else if (action === 'confirm') {
+        await purchasesApi.confirm(id);
+        toast.success('Purchase confirmed. Stock batches created!');
+      }
+      queryClient.invalidateQueries({ queryKey: ['purchases'] });
+      refetch();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Action failed');
+    } finally {
+      setActionPendingId(null);
+    }
   };
 
   return (
@@ -96,22 +113,71 @@ export function PurchasesPage() {
             )},
             { key: 'total', header: 'Total Amt', render: (p: any) => {
               const bal = Number(p.total_amount || 0) - Number(p.paid_amount || 0);
+              const paidAmt = Number(p.paid_amount || 0);
               return (
               <div className="text-right">
-                <p className="font-semibold text-neutral-900">{formatCurrency(p.total_amount)}</p>
-                {p.paid_amount > 0 && <p className="text-xs text-emerald-600">Paid: {formatCurrency(p.paid_amount)}</p>}
-                {bal > 0 && <p className="text-xs text-red-500">Balance: {formatCurrency(bal)}</p>}
+                <p className="font-semibold text-red-600">{formatCurrency(p.total_amount)}</p>
+                {paidAmt > 0 && <p className="text-xs text-emerald-600">Paid: {formatCurrency(p.paid_amount)}</p>}
+                {paidAmt > 0 && bal > 0 && <p className="text-xs text-red-500">Balance: {formatCurrency(bal)}</p>}
               </div>
             );}},
             { key: 'status', header: 'Status', render: (p: any) => <StatusBadge status={p.status} /> },
-            { key: 'actions', header: '', hideOnMobile: true, className: 'text-right w-24', render: (p: any) => (
-              <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
-                <Button size="sm" variant="ghost" onClick={() => navigate(`/purchases/${p.id}`)} title="Edit"><Pencil className="w-4 h-4 text-blue-500" /></Button>
-                {p.status === 'draft' && (
-                  <Button size="sm" variant="ghost" onClick={() => handleCancel(p.id)} title="Cancel"><X className="w-4 h-4 text-red-500" /></Button>
-                )}
-              </div>
-            )},
+            {
+              key: 'actions',
+              header: 'Actions',
+              render: (p: any) => {
+                const isPending = actionPendingId === p.id;
+                if (p.status === 'draft') {
+                  return (
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      icon={Send}
+                      loading={isPending}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStatusUpdate(p.id, 'submit');
+                      }}
+                    >
+                      Submit
+                    </Button>
+                  );
+                }
+                if (p.status === 'submitted') {
+                  return (
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      icon={Check}
+                      loading={isPending}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStatusUpdate(p.id, 'approve');
+                      }}
+                    >
+                      Approve
+                    </Button>
+                  );
+                }
+                if (p.status === 'approved') {
+                  return (
+                    <Button
+                      size="sm"
+                      variant="success"
+                      icon={Check}
+                      loading={isPending}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStatusUpdate(p.id, 'confirm');
+                      }}
+                    >
+                      Confirm
+                    </Button>
+                  );
+                }
+                return null;
+              }
+            },
           ]}
         />
       )}

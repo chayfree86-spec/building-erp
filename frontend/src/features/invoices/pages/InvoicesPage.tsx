@@ -9,10 +9,11 @@ import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { Button } from '@/components/ui/Button';
 import { useInvoices } from '@/features/purchases/api/queries';
 import { formatCurrency, formatDate } from '@/utils/format';
-import { Search, RotateCcw, Receipt, Eye, X, Pencil } from 'lucide-react';
+import { Search, RotateCcw, Receipt, Eye, X, Pencil, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { salesApi } from '@/services/api-endpoints';
 import { useQueryClient } from '@tanstack/react-query';
+import { ConfirmDialog } from '@/components/ui/Modal';
 
 const statusOptions = [
   { value: 'draft', label: 'Draft' },
@@ -26,14 +27,15 @@ export function InvoicesPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{ type: 'cancel' | 'delete'; id: number } | null>(null);
 
   const { data, isLoading, isError, refetch } = useInvoices({ search: search || undefined, status: status || undefined });
   const invoices = (data as any)?.items || [];
 
-  const handleCancel = async (id: number) => {
-    if (!window.confirm('Cancel this invoice?')) return;
-    try { await salesApi.cancel(id, 'Cancelled by user'); toast.success('Invoice cancelled'); queryClient.invalidateQueries({ queryKey: ['invoices'] }); }
-    catch (err: any) { toast.error(err?.response?.data?.message || 'Failed'); }
+  const triggerConfirm = (type: 'cancel' | 'delete', id: number) => {
+    setConfirmAction({ type, id });
+    setConfirmOpen(true);
   };
 
   return (
@@ -77,23 +79,54 @@ export function InvoicesPage() {
             )},
             { key: 'total', header: 'Amount', render: (inv: any) => {
               const bal = Number(inv.total_amount || 0) - Number(inv.paid_amount || 0);
+              const paidAmt = Number(inv.paid_amount || 0);
               return (
               <div className="text-right">
-                <p className="font-semibold text-neutral-900">{formatCurrency(inv.total_amount)}</p>
-                {inv.paid_amount > 0 && <p className="text-xs text-emerald-600">Paid: {formatCurrency(inv.paid_amount)}</p>}
-                {bal > 0 && <p className="text-xs text-red-500">Balance: {formatCurrency(bal)}</p>}
+                <p className="font-semibold text-red-600">{formatCurrency(inv.total_amount)}</p>
+                {paidAmt > 0 && <p className="text-xs text-emerald-600">Paid: {formatCurrency(inv.paid_amount)}</p>}
+                {paidAmt > 0 && bal > 0 && <p className="text-xs text-red-500">Balance: {formatCurrency(bal)}</p>}
               </div>
             );}},
             { key: 'status', header: 'Status', render: (inv: any) => <StatusBadge status={inv.status} /> },
-            { key: 'actions', header: '', hideOnMobile: true, className: 'text-right w-24', render: (inv: any) => (
+            { key: 'actions', header: 'Actions', className: 'text-right w-28', render: (inv: any) => (
               <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
                 <Button size="sm" variant="ghost" onClick={() => navigate(`/invoices/${inv.id}`)} title="Edit"><Pencil className="w-4 h-4 text-blue-500" /></Button>
+                <Button size="sm" variant="ghost" onClick={() => triggerConfirm('delete', inv.id)} title="Delete"><Trash2 className="w-4 h-4 text-red-500" /></Button>
                 {inv.status === 'draft' && (
-                  <Button size="sm" variant="ghost" onClick={() => handleCancel(inv.id)} title="Cancel"><X className="w-4 h-4 text-red-500" /></Button>
+                  <Button size="sm" variant="ghost" onClick={() => triggerConfirm('cancel', inv.id)} title="Cancel"><X className="w-4 h-4 text-neutral-400" /></Button>
                 )}
               </div>
             )},
           ]}
+        />
+      )}
+
+      {confirmAction && (
+        <ConfirmDialog
+          open={confirmOpen}
+          onClose={() => { setConfirmOpen(false); setConfirmAction(null); }}
+          onConfirm={async () => {
+            const { type, id } = confirmAction;
+            setConfirmOpen(false);
+            setConfirmAction(null);
+            try {
+              if (type === 'cancel') {
+                await salesApi.cancel(id, 'Cancelled by user');
+                toast.success('Invoice cancelled successfully');
+              } else {
+                await salesApi.remove(id);
+                toast.success('Invoice deleted successfully');
+              }
+              queryClient.invalidateQueries({ queryKey: ['invoices'] });
+            } catch (err: any) {
+              toast.error(err?.response?.data?.message || 'Failed to execute action');
+            }
+          }}
+          title={confirmAction.type === 'cancel' ? 'Cancel Invoice?' : 'Delete Invoice?'}
+          message={confirmAction.type === 'cancel'
+            ? 'Are you sure you want to cancel this invoice? This action cannot be undone.'
+            : 'Are you sure you want to delete this draft invoice? This will permanently remove the record.'}
+          confirmLabel={confirmAction.type === 'cancel' ? 'Yes, Cancel' : 'Yes, Delete'}
         />
       )}
     </div>

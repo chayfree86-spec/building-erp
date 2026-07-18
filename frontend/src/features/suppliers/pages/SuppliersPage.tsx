@@ -108,7 +108,7 @@ export function SuppliersPage() {
             { key: 'gst', header: 'GST', hideOnMobile: true, render: (s: Supplier) => s.gst_number || '-' },
             { key: 'balance', header: 'Outstanding', className: 'text-right tabular-nums', render: (s: Supplier) => <span className="font-semibold" style={{ color: '#e25c6a' }}>{formatCurrency(s.outstanding_balance ?? s.opening_balance)}</span> },
             { key: 'status', header: 'Status', render: (s: Supplier) => <StatusBadge status={s.status} /> },
-            { key: 'actions', header: '', hideOnMobile: true, className: 'text-right w-36', render: (s: Supplier) => (
+            { key: 'actions', header: 'Actions', className: 'text-right w-36', render: (s: Supplier) => (
               <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
                 <Button size="sm" variant="ghost" onClick={() => navigate(`/supplier-payments/new?supplier=${s.id}`)} title="Pay"><CreditCard className="w-4 h-4 text-emerald-500 hover:text-emerald-700" /></Button>
                 <Button size="sm" variant="ghost" onClick={() => { setEditingItem(s); setModalOpen(true); }} title="Edit"><Pencil className="w-4 h-4 text-neutral-400 hover:text-primary-600" /></Button>

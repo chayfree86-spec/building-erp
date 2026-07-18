@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Plus, Trash2, Loader2, Save, UserPlus, X, ShoppingCart, User, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
+import { Select } from '@/components/ui/Select';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { salesApi, productsApi, customersApi, stockApi, categoriesApi } from '@/services/api-endpoints';
 import { useAuth } from '@/features/auth/auth-context';
@@ -358,24 +359,19 @@ export function InvoiceNewPage() {
                           />
                         </td>
                         <td className="py-3 px-2 align-middle">
-                          <select
-                            className="input-field w-full text-sm py-1 px-2 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-white"
+                          <Select
+                            compact
+                            options={unitOptions}
                             value={item.unit_id || ''}
-                            onChange={(e) => updateItem(idx, 'unit_id', Number(e.target.value))}
+                            onChange={(val) => updateItem(idx, 'unit_id', Number(val))}
                             disabled={!item.product_id}
-                          >
-                            <option value="">Select...</option>
-                            {unitOptions.map((o) => (
-                              <option key={o.value} value={o.value}>
-                                {o.label}
-                              </option>
-                            ))}
-                          </select>
+                            placeholder="Select..."
+                          />
                         </td>
-                        <td className="py-3 px-2 align-middle"><input type="number" className="input-field w-full text-right text-sm" min="0.001" step="0.001" value={item.quantity || ''} onChange={(e) => updateItem(idx, 'quantity', Number(e.target.value))} /></td>
-                        <td className="py-3 px-2 align-middle"><input type="number" className="input-field w-full text-right text-sm" min="0" step="0.01" value={item.rate || ''} onChange={(e) => updateItem(idx, 'rate', Number(e.target.value))} /></td>
-                        <td className="py-3 px-2 align-middle"><input type="number" className="input-field w-full text-right text-sm" min="0" step="0.01" value={item.discount_amount || ''} onChange={(e) => updateItem(idx, 'discount_amount', Number(e.target.value))} /></td>
-                        <td className="py-3 px-2 align-middle"><input type="number" className="input-field w-full text-right text-sm" min="0" step="0.01" value={item.gst_rate || ''} onChange={(e) => updateItem(idx, 'gst_rate', Number(e.target.value))} /></td>
+                        <td className="py-3 px-2 align-middle"><input type="number" className="input-field w-full text-right text-sm !py-1.5 !px-2" min="0.001" step="0.001" value={item.quantity || ''} onChange={(e) => updateItem(idx, 'quantity', Number(e.target.value))} onFocus={(e) => e.target.select()} /></td>
+                        <td className="py-3 px-2 align-middle"><input type="number" className="input-field w-full text-right text-sm !py-1.5 !px-2" min="0" step="0.01" value={item.rate || ''} onChange={(e) => updateItem(idx, 'rate', Number(e.target.value))} onFocus={(e) => e.target.select()} /></td>
+                        <td className="py-3 px-2 align-middle"><input type="number" className="input-field w-full text-right text-sm !py-1.5 !px-2" min="0" step="0.01" value={item.discount_amount || ''} onChange={(e) => updateItem(idx, 'discount_amount', Number(e.target.value))} onFocus={(e) => e.target.select()} /></td>
+                        <td className="py-3 px-2 align-middle"><input type="number" className="input-field w-full text-right text-sm !py-1.5 !px-2" min="0" step="0.01" value={item.gst_rate || ''} onChange={(e) => updateItem(idx, 'gst_rate', Number(e.target.value))} onFocus={(e) => e.target.select()} /></td>
                         <td className="py-3 px-2 text-right tabular-nums text-neutral-600 align-middle">{formatCurrency(item.tax_amount)}</td>
                         <td className="py-3 px-2 text-right font-semibold tabular-nums align-middle">{formatCurrency(item.line_total)}</td>
                         <td className="py-3 align-middle"><button type="button" onClick={() => removeItem(idx)} className="p-1 text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button></td>

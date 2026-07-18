@@ -25,7 +25,7 @@ return new class extends Migration
             $table->decimal('round_off', 15, 2)->default(0);
             $table->decimal('total_amount', 15, 2)->default(0);
             $table->decimal('refund_amount', 15, 2)->default(0);
-            $table->enum('status', ['draft', 'confirmed', 'cancelled', 'reversed'])->default('draft');
+            $table->enum('status', ['draft', 'confirmed', 'cancelled', 'returned'])->default('draft');
             $table->text('remarks')->nullable();
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();

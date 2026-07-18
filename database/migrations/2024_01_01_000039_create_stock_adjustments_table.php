@@ -14,7 +14,7 @@ return new class extends Migration
             $table->string('adjustment_number', 100)->unique();
             $table->date('adjustment_date');
             $table->enum('type', ['increase', 'decrease', 'damage', 'shortage', 'excess', 'manual_correction']);
-            $table->enum('status', ['draft', 'submitted', 'approved', 'confirmed', 'cancelled', 'reversed'])->default('draft');
+            $table->enum('status', ['draft', 'submitted', 'approved', 'confirmed', 'cancelled', 'returned'])->default('draft');
             $table->text('reason')->nullable();
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();

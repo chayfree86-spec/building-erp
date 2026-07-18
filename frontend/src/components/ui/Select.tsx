@@ -50,11 +50,11 @@ export function Select({ options, value, onChange, placeholder = 'Select...', la
           onClick={() => !disabled && setOpen(!open)}
           className={btnClass}
         >
-          <span className={selected || (value && value !== 0) ? 'text-neutral-900' : 'text-neutral-400'}>
+          <span className={`flex-1 truncate text-left mr-2 ${selected || (value && value !== 0) ? 'text-neutral-900' : 'text-neutral-400'}`}>
             {selected ? (
-              <span className="flex items-center gap-2">
-                {selected.label}
-                {selected.sub && <span className="text-xs text-neutral-400 font-normal">{selected.sub}</span>}
+              <span className="flex items-center gap-2 truncate">
+                <span className="truncate">{selected.label}</span>
+                {selected.sub && <span className="text-xs text-neutral-400 font-normal shrink-0">{selected.sub}</span>}
               </span>
             ) : (value && value !== 0 && value !== '0' ? String(value) : placeholder)}
           </span>

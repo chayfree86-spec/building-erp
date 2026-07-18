@@ -42,7 +42,7 @@ export function InvoiceDetailPage() {
 
   const updateMutation = useMutation({
     mutationFn: (payload: any) => salesApi.update(Number(id), payload),
-    onSuccess: () => { toast.success('Invoice updated!'); setEditMode(false); queryClient.invalidateQueries({ queryKey: ['invoices', Number(id)] }); },
+    onSuccess: () => { toast.success('Invoice updated!'); setEditMode(false); queryClient.invalidateQueries({ queryKey: ['invoices'] }); queryClient.invalidateQueries({ queryKey: ['stock'] }); },
     onError: (err: any) => { const e = err?.response?.data?.errors; toast.error(e ? String(Object.values(e)[0]) : 'Update failed'); },
   });
 
@@ -143,8 +143,9 @@ export function InvoiceDetailPage() {
       toast.success('Payment recorded!');
       setShowPayModal(false);
       setPayAmount(''); setPayMode(0); setPayRef(''); setPayRemarks('');
-      queryClient.invalidateQueries({ queryKey: ['invoices', Number(id)] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['customer-payments'] });
+      queryClient.invalidateQueries({ queryKey: ['stock'] });
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Payment failed');
     } finally { setPaySaving(false); }
@@ -233,19 +234,19 @@ export function InvoiceDetailPage() {
                   </td>
                   <td className="py-3 px-2 text-right align-middle">
                     {editMode ? (
-                      <input type="number" className="input-field w-20 text-right text-sm" min="0.001" step="0.001" value={item.quantity || ''} onChange={e => editItem(idx, 'quantity', e.target.value)} />
+                      <input type="number" className="input-field w-20 text-right text-sm !py-1 !px-1.5" min="0.001" step="0.001" value={item.quantity || ''} onChange={e => editItem(idx, 'quantity', e.target.value)} onFocus={(e) => e.target.select()} />
                     ) : (
                       `${Number(item.quantity).toFixed(3)} ${(item.unit?.short_name || item.product?.unit?.short_name || '')}`
                     )}
                   </td>
                   <td className="py-3 px-2 text-right font-mono align-middle">
-                    {editMode ? <input type="number" className="input-field w-24 text-right text-sm" min="0" step="0.01" value={item.rate || ''} onChange={e => editItem(idx, 'rate', e.target.value)} /> : formatCurrency(Number(item.rate))}
+                    {editMode ? <input type="number" className="input-field w-24 text-right text-sm !py-1 !px-1.5" min="0" step="0.01" value={item.rate || ''} onChange={e => editItem(idx, 'rate', e.target.value)} onFocus={(e) => e.target.select()} /> : formatCurrency(Number(item.rate))}
                   </td>
                   <td className="py-3 px-2 text-right font-mono text-red-600 align-middle">
-                    {editMode ? <input type="number" className="input-field w-20 text-right text-sm" min="0" step="0.01" value={item.discount_amount || ''} onChange={e => editItem(idx, 'discount_amount', e.target.value)} /> : formatCurrency(Number(item.discount_amount || 0))}
+                    {editMode ? <input type="number" className="input-field w-20 text-right text-sm !py-1 !px-1.5" min="0" step="0.01" value={item.discount_amount || ''} onChange={e => editItem(idx, 'discount_amount', e.target.value)} onFocus={(e) => e.target.select()} /> : formatCurrency(Number(item.discount_amount || 0))}
                   </td>
                   <td className="py-3 px-2 text-right align-middle">
-                    {editMode ? <input type="number" className="input-field w-16 text-right text-sm" min="0" step="0.01" value={item.gst_rate || ''} onChange={e => editItem(idx, 'gst_rate', e.target.value)} /> : `${Number(item.gst_rate || 0)}%`}
+                    {editMode ? <input type="number" className="input-field w-16 text-right text-sm !py-1 !px-1.5" min="0" step="0.01" value={item.gst_rate || ''} onChange={e => editItem(idx, 'gst_rate', e.target.value)} onFocus={(e) => e.target.select()} /> : `${Number(item.gst_rate || 0)}%`}
                   </td>
                   <td className="py-3 px-2 text-right font-mono align-middle">{formatCurrency(Number(item.tax_amount || 0))}</td>
                   <td className="py-3 px-2 text-right font-semibold font-mono align-middle">{formatCurrency(Number(item.line_total))}</td>

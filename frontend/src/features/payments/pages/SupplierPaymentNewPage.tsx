@@ -123,6 +123,7 @@ export function SupplierPaymentNewPage() {
       toast.success('Payment recorded successfully!');
       queryClient.invalidateQueries({ queryKey: ['supplier-payments'] });
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      queryClient.invalidateQueries({ queryKey: ['purchases'] });
       navigate('/supplier-payments');
     },
     onError: (err: any) => toast.error(err?.response?.data?.message || 'Failed to create payment'),

@@ -23,7 +23,7 @@ return new class extends Migration
             $table->decimal('total_amount', 15, 2)->default(0);
             $table->decimal('paid_amount', 15, 2)->default(0);
             $table->decimal('balance_amount', 15, 2)->default(0);
-            $table->enum('status', ['draft', 'submitted', 'approved', 'confirmed', 'partially_paid', 'paid', 'cancelled', 'reversed'])->default('draft');
+            $table->enum('status', ['draft', 'submitted', 'approved', 'confirmed', 'partially_paid', 'paid', 'cancelled', 'returned'])->default('draft');
             $table->text('remarks')->nullable();
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();

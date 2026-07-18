@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Loader2, Building2, Calendar, IndianRupee, Edit2, Save, X } from 'lucide-react';
+import { ArrowLeft, Loader2, Building2, Calendar, IndianRupee, Edit2, Save, X, Trash2, Send, Check } from 'lucide-react';
 import { purchasesApi } from '@/services/api-endpoints';
 import { formatCurrency, formatDate } from '@/utils/format';
 import toast from 'react-hot-toast';
+import { ConfirmDialog } from '@/components/ui/Modal';
 
 export function PurchaseDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -12,6 +13,9 @@ export function PurchaseDetailPage() {
   const queryClient = useQueryClient();
   const [editMode, setEditMode] = useState(false);
   const [editedItems, setEditedItems] = useState<any[]>([]);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<'cancel' | 'delete' | null>(null);
+  const [statusUpdating, setStatusUpdating] = useState(false);
 
   const { data: purchase, isLoading, isError } = useQuery({
     queryKey: ['purchases', Number(id)],
@@ -25,13 +29,41 @@ export function PurchaseDetailPage() {
     onError: (err: any) => toast.error(err?.response?.data?.message || 'Update failed'),
   });
 
+  const handleStatusUpdate = async (action: 'submit' | 'approve' | 'confirm') => {
+    setStatusUpdating(true);
+    try {
+      if (action === 'submit') {
+        await purchasesApi.submit(Number(id));
+        toast.success('Purchase submitted successfully');
+      } else if (action === 'approve') {
+        await purchasesApi.approve(Number(id));
+        toast.success('Purchase approved successfully');
+      } else if (action === 'confirm') {
+        await purchasesApi.confirm(Number(id));
+        toast.success('Purchase confirmed. Stock batches created!');
+      }
+      queryClient.invalidateQueries({ queryKey: ['purchases'] });
+      queryClient.invalidateQueries({ queryKey: ['stock'] });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Status update failed');
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
+
+  const triggerConfirm = (action: 'cancel' | 'delete') => {
+    setConfirmAction(action);
+    setConfirmOpen(true);
+  };
+
   if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 text-primary-600 animate-spin" /></div>;
   if (isError || !purchase) return <div className="card p-8 text-center text-red-500">Failed to load purchase details.</div>;
 
   const items = editMode && editedItems.length > 0 ? editedItems : (purchase.items || []);
   const supplier = purchase.supplier;
   const isDraft = purchase.status === 'draft';
-  const canEdit = purchase.status === 'draft' || purchase.status === 'submitted';
+  const canEdit = true;
+  const isConfirmedOrLater = ['confirmed', 'partially_paid', 'paid', 'returned', 'cancelled'].includes(purchase.status);
 
   const statusColors: Record<string, string> = {
     draft: 'bg-neutral-100 text-neutral-700', submitted: 'bg-blue-100 text-blue-700',
@@ -73,8 +105,45 @@ export function PurchaseDetailPage() {
           </div>
           <p className="text-sm text-neutral-500 mt-1">Created on {formatDate(purchase.created_at)}</p>
         </div>
-        {canEdit && !editMode && (
-          <button onClick={enterEditMode} className="btn btn-secondary flex items-center gap-2"><Edit2 className="w-4 h-4" /> Edit</button>
+        {!editMode && (
+          <div className="flex gap-2">
+            {canEdit && (
+              <button onClick={enterEditMode} className="btn btn-secondary flex items-center gap-2 text-sm"><Edit2 className="w-4 h-4" /> Edit</button>
+            )}
+            
+            <button
+              onClick={() => triggerConfirm('delete')}
+              disabled={purchase.status !== 'draft'}
+              className="btn btn-danger flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Trash2 className="w-4 h-4" /> Delete
+            </button>
+
+            {purchase.status === 'draft' && (
+              <button onClick={() => handleStatusUpdate('submit')} disabled={statusUpdating} className="btn btn-primary flex items-center gap-2 text-sm">
+                {statusUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} Submit
+              </button>
+            )}
+            {purchase.status === 'submitted' && (
+              <>
+                <button onClick={() => triggerConfirm('cancel')} className="btn btn-danger flex items-center gap-2 text-sm"><X className="w-4 h-4" /> Cancel</button>
+                <button onClick={() => handleStatusUpdate('approve')} disabled={statusUpdating} className="btn btn-primary flex items-center gap-2 text-sm">
+                  {statusUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Approve
+                </button>
+              </>
+            )}
+            {purchase.status === 'approved' && (
+              <>
+                <button onClick={() => triggerConfirm('cancel')} className="btn btn-danger flex items-center gap-2 text-sm"><X className="w-4 h-4" /> Cancel</button>
+                <button onClick={() => handleStatusUpdate('confirm')} disabled={statusUpdating} className="btn btn-success flex items-center gap-2 text-sm">
+                  {statusUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Confirm
+                </button>
+              </>
+            )}
+            {purchase.status === 'confirmed' && Number(purchase.paid_amount || 0) === 0 && (
+              <button onClick={() => triggerConfirm('cancel')} className="btn btn-danger flex items-center gap-2 text-sm"><X className="w-4 h-4" /> Cancel</button>
+            )}
+          </div>
         )}
         {editMode && (
           <div className="flex gap-2">
@@ -141,22 +210,22 @@ export function PurchaseDetailPage() {
                   <td className="py-3 px-2 font-medium align-middle">{item.product?.name || `Product #${item.product_id}`}</td>
                   <td className="py-3 px-2 text-right align-middle">
                     {editMode ? (
-                      <input type="number" className="input-field w-20 text-right text-sm" min="0.001" step="0.001" value={item.quantity} onChange={(e) => updateItem(idx, 'quantity', Number(e.target.value))} />
+                      <input type="number" className="input-field w-20 text-right text-sm !py-1 !px-1.5" min="0.001" step="0.001" value={item.quantity} onChange={(e) => updateItem(idx, 'quantity', Number(e.target.value))} onFocus={(e) => e.target.select()} disabled={isConfirmedOrLater} />
                     ) : (
                       `${Number(item.quantity).toFixed(3)} ${(item.unit?.short_name || item.product?.unit?.short_name || '')}`
                     )}
                   </td>
                   <td className="py-3 px-2 text-right font-mono align-middle">
-                    {editMode ? <input type="number" className="input-field w-24 text-right text-sm" min="0" step="0.01" value={item.purchase_price} onChange={(e) => updateItem(idx, 'purchase_price', Number(e.target.value))} />
+                    {editMode ? <input type="number" className="input-field w-24 text-right text-sm !py-1 !px-1.5" min="0" step="0.01" value={item.purchase_price} onChange={(e) => updateItem(idx, 'purchase_price', Number(e.target.value))} onFocus={(e) => e.target.select()} disabled={isConfirmedOrLater} />
                     : formatCurrency(Number(item.purchase_price))}</td>
                   <td className="py-3 px-2 text-right font-mono align-middle">
-                    {editMode ? <input type="number" className="input-field w-24 text-right text-sm" min="0" step="0.01" value={item.selling_price || 0} onChange={(e) => updateItem(idx, 'selling_price', Number(e.target.value))} />
+                    {editMode ? <input type="number" className="input-field w-24 text-right text-sm !py-1 !px-1.5" min="0" step="0.01" value={item.selling_price || 0} onChange={(e) => updateItem(idx, 'selling_price', Number(e.target.value))} onFocus={(e) => e.target.select()} />
                     : <span className="text-primary-600 font-medium">{formatCurrency(Number(item.selling_price || 0))}</span>}</td>
                   <td className="py-3 px-2 text-right font-mono text-red-600 align-middle">
-                    {editMode ? <input type="number" className="input-field w-20 text-right text-sm" min="0" step="0.01" value={item.discount_amount || 0} onChange={(e) => updateItem(idx, 'discount_amount', Number(e.target.value))} />
+                    {editMode ? <input type="number" className="input-field w-20 text-right text-sm !py-1 !px-1.5" min="0" step="0.01" value={item.discount_amount || 0} onChange={(e) => updateItem(idx, 'discount_amount', Number(e.target.value))} onFocus={(e) => e.target.select()} />
                     : formatCurrency(Number(item.discount_amount || 0))}</td>
                   <td className="py-3 px-2 text-right align-middle">
-                    {editMode ? <input type="number" className="input-field w-16 text-right text-sm" min="0" step="0.01" value={item.gst_rate || 0} onChange={(e) => updateItem(idx, 'gst_rate', Number(e.target.value))} />
+                    {editMode ? <input type="number" className="input-field w-16 text-right text-sm !py-1 !px-1.5" min="0" step="0.01" value={item.gst_rate || 0} onChange={(e) => updateItem(idx, 'gst_rate', Number(e.target.value))} onFocus={(e) => e.target.select()} disabled={isConfirmedOrLater} />
                     : `${Number(item.gst_rate || 0)}%`}</td>
                   <td className="py-3 px-2 text-right font-mono align-middle">{formatCurrency(Number(item.tax_amount || 0))}</td>
                   <td className="py-3 px-2 text-right font-semibold font-mono align-middle">{formatCurrency(Number(item.line_total))}</td>
@@ -191,6 +260,37 @@ export function PurchaseDetailPage() {
           <h3 className="text-sm font-medium text-neutral-500 mb-1">Remarks</h3>
           <p className="text-neutral-700">{purchase.remarks}</p>
         </div>
+      )}
+
+      {confirmAction && (
+        <ConfirmDialog
+          open={confirmOpen}
+          onClose={() => { setConfirmOpen(false); setConfirmAction(null); }}
+          onConfirm={async () => {
+            const act = confirmAction;
+            setConfirmOpen(false);
+            setConfirmAction(null);
+            try {
+              if (act === 'cancel') {
+                await purchasesApi.cancel(Number(id), 'Cancelled by user');
+                toast.success('Purchase cancelled successfully');
+                queryClient.invalidateQueries({ queryKey: ['purchases'] });
+                queryClient.invalidateQueries({ queryKey: ['stock'] });
+              } else {
+                await purchasesApi.remove(Number(id));
+                toast.success('Purchase deleted successfully');
+                navigate('/purchases');
+              }
+            } catch (err: any) {
+              toast.error(err?.response?.data?.message || 'Failed to execute action');
+            }
+          }}
+          title={confirmAction === 'cancel' ? 'Cancel Purchase?' : 'Delete Purchase?'}
+          message={confirmAction === 'cancel'
+            ? 'Are you sure you want to cancel this purchase? This action cannot be undone.'
+            : 'Are you sure you want to delete this draft purchase? This will permanently remove the record.'}
+          confirmLabel={confirmAction === 'cancel' ? 'Yes, Cancel' : 'Yes, Delete'}
+        />
       )}
     </div>
   );

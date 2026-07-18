@@ -19,7 +19,7 @@ return new class extends Migration
             $table->decimal('allocated_amount', 15, 2)->default(0);
             $table->decimal('advance_amount', 15, 2)->default(0);
             $table->string('transaction_reference', 200)->nullable();
-            $table->enum('status', ['draft', 'confirmed', 'cancelled', 'reversed'])->default('draft');
+            $table->enum('status', ['draft', 'confirmed', 'cancelled', 'returned'])->default('draft');
             $table->text('remarks')->nullable();
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('cancelled_by')->nullable()->constrained('users')->nullOnDelete();

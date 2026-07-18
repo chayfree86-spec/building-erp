@@ -55,7 +55,7 @@ export function SearchableSelect({
           onClick={() => { if (!disabled) { setOpen(!open); if (!open) setTimeout(() => inputRef.current?.focus(), 50); } }}
           className={btnClass}
         >
-          <span className={selected ? 'text-neutral-900' : 'text-neutral-400'}>
+          <span className={`flex-1 truncate text-left mr-2 ${selected ? 'text-neutral-900' : 'text-neutral-400'}`}>
             {loading ? 'Loading...' : selected ? selected.label : placeholder}
           </span>
           <ChevronDown className={`w-4 h-4 text-neutral-400 transition-transform duration-200 shrink-0 ${open ? 'rotate-180' : ''}`} />

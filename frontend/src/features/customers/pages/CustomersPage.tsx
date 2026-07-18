@@ -107,7 +107,7 @@ export function CustomersPage() {
               <span className="font-semibold" style={{ color: (c.outstanding_balance ?? c.opening_balance) > 0 ? '#e25c6a' : undefined }}>{formatCurrency(c.outstanding_balance ?? c.opening_balance)}</span>
             )},
             { key: 'status', header: 'Status', render: (c: Customer) => <StatusBadge status={c.status} /> },
-            { key: 'actions', header: '', hideOnMobile: true, className: 'text-right w-36', render: (c: Customer) => (
+            { key: 'actions', header: 'Actions', className: 'text-right w-36', render: (c: Customer) => (
               <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
                 <Button size="sm" variant="ghost" onClick={() => navigate(`/customer-payments/new?customer=${c.id}`)} title="Receive Payment"><CreditCard className="w-4 h-4 text-emerald-500 hover:text-emerald-700" /></Button>
                 <Button size="sm" variant="ghost" onClick={() => { setEditingItem(c); setModalOpen(true); }} title="Edit"><Pencil className="w-4 h-4 text-neutral-400 hover:text-primary-600" /></Button>

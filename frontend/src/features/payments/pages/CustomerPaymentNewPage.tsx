@@ -123,6 +123,7 @@ export function CustomerPaymentNewPage() {
       toast.success('Payment recorded successfully!');
       queryClient.invalidateQueries({ queryKey: ['customer-payments'] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
       navigate('/customer-payments');
     },
     onError: (err: any) => {

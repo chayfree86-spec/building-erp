@@ -99,11 +99,11 @@ class PurchaseController extends Controller
             'total_amount' => $request->total_amount,
             'paid_amount' => $request->paid_amount ?? 0,
             'balance_amount' => $request->total_amount - ($request->paid_amount ?? 0),
-            'status' => 'approved',
+            'status' => 'draft',
             'remarks' => $request->remarks,
             'created_by' => $request->user()->id,
-            'approved_by' => $request->user()->id,
-            'approved_at' => now(),
+            'approved_by' => null,
+            'approved_at' => null,
         ]);
 
         foreach ($request->items as $item) {
@@ -123,13 +123,6 @@ class PurchaseController extends Controller
             ]);
         }
 
-        // Auto-confirm purchase: create batches, inventory ledger & supplier ledger
-        try {
-            $purchase = \App\Services\PurchaseService::confirm($purchase);
-        } catch (\RuntimeException $e) {
-            // If confirm fails, still return the purchase as created
-        }
-
         \App\Services\AuditLogService::log(
             module: 'purchase',
             action: 'purchase_create',
@@ -140,8 +133,8 @@ class PurchaseController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Purchase created & confirmed. Inventory updated.',
-            'data' => $purchase->load(['items', 'supplier', 'store', 'batches']),
+            'message' => 'Purchase created successfully.',
+            'data' => $purchase->load(['items', 'supplier', 'store']),
             'errors' => null,
         ], 201);
     }
@@ -199,10 +192,29 @@ class PurchaseController extends Controller
 
         // Update items if provided
         if ($request->has('items')) {
-            $purchase->items()->delete();
-            foreach ($request->items as $item) {
-                $purchase->items()->create($item);
+            $existingItemIds = [];
+            foreach ($request->items as $itemData) {
+                if (isset($itemData['id']) && $itemData['id'] > 0) {
+                    $item = $purchase->items()->find($itemData['id']);
+                    if ($item) {
+                        $item->update($itemData);
+                        $existingItemIds[] = $item->id;
+
+                        // Sync with purchase_batches
+                        \App\Models\PurchaseBatch::where('purchase_item_id', $item->id)->update([
+                            'purchase_price' => $item->purchase_price,
+                            'selling_price' => $item->selling_price,
+                            'landed_cost' => $item->landed_cost ?: $item->purchase_price,
+                            'gst_rate' => $item->gst_rate,
+                        ]);
+                    }
+                } else {
+                    $newItem = $purchase->items()->create($itemData);
+                    $existingItemIds[] = $newItem->id;
+                }
             }
+            // Delete items that are not in the request
+            $purchase->items()->whereNotIn('id', $existingItemIds)->delete();
         }
 
         return response()->json([

@@ -29,7 +29,7 @@ return new class extends Migration
             $table->decimal('landed_cost', 15, 2);
             $table->decimal('gst_rate', 7, 4)->default(0);
             $table->date('expiry_date')->nullable();
-            $table->enum('status', ['active', 'exhausted', 'cancelled', 'reversed'])->default('active');
+            $table->enum('status', ['active', 'exhausted', 'cancelled', 'returned'])->default('active');
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
 
