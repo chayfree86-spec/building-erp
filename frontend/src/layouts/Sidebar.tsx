@@ -25,12 +25,17 @@ const navItems: NavItem[] = [
     { label: 'Customer Payments', path: '/customer-payments' },
     { label: 'Supplier Payments', path: '/supplier-payments' },
   ]},
-  { label: 'Returns', icon: RotateCcw, path: '/purchase-returns' },
-  { label: 'Transfers', icon: ArrowRightLeft, path: '/stock-transfers' },
   { label: 'Reports', icon: BarChart3, path: '/reports' },
-  { label: 'Users & Roles', icon: Shield, path: '/users' },
-  { label: 'Audit Logs', icon: FileText, path: '/audit-logs' },
-  { label: 'Settings', icon: Settings, path: '/settings' },
+  { 
+    label: 'Settings', icon: Settings, path: '/settings',
+    children: [
+      { label: 'General Settings', path: '/settings' },
+      { label: 'Returns', path: '/purchase-returns' },
+      { label: 'Transfers', path: '/stock-transfers' },
+      { label: 'Users & Roles', path: '/users' },
+      { label: 'Audit Logs', path: '/audit-logs' },
+    ]
+  },
   {
     label: 'Masters', icon: Boxes, path: '/products',
     children: [

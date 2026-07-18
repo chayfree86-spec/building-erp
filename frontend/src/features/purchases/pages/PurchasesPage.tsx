@@ -63,13 +63,21 @@ export function PurchasesPage() {
         action={{ label: 'New Purchase', onClick: () => navigate('/purchases/new') }}
       />
       <div className="card p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search invoice #, supplier..." className="input-field has-icon" />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex flex-1 items-center gap-3 flex-wrap">
+            <div className="relative flex-1 min-w-[200px] max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search invoice #, supplier..." className="input-field has-icon" />
+            </div>
+            <div className="w-48">
+              <SearchableSelect placeholder="All Status" options={statusOptions} value={status} onChange={setStatus} />
+            </div>
           </div>
-          <SearchableSelect placeholder="All Status" options={statusOptions} value={status} onChange={setStatus} />
-          <Button variant="ghost" icon={RotateCcw} onClick={() => { setSearch(''); setStatus(''); }}>Reset</Button>
+          
+          <div className="bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2 flex items-center gap-2 shadow-sm shrink-0">
+            <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Total Purchases:</span>
+            <span className="text-sm font-bold text-neutral-900 font-mono">{formatCurrency(purchases.reduce((sum: number, pur: any) => sum + (Number(pur.total_amount) || 0), 0))}</span>
+          </div>
         </div>
       </div>
       {isLoading ? <CardSkeleton count={6} /> : isError ? (
@@ -111,11 +119,11 @@ export function PurchasesPage() {
                 )) || '-'}
               </div>
             )},
-            { key: 'total', header: 'Total Amt', render: (p: any) => {
+            { key: 'total', header: 'Total Amt', className: 'text-right', render: (p: any) => {
               const bal = Number(p.total_amount || 0) - Number(p.paid_amount || 0);
               const paidAmt = Number(p.paid_amount || 0);
               return (
-              <div className="text-right">
+              <div>
                 <p className="font-semibold text-red-600">{formatCurrency(p.total_amount)}</p>
                 {paidAmt > 0 && <p className="text-xs text-emerald-600">Paid: {formatCurrency(p.paid_amount)}</p>}
                 {paidAmt > 0 && bal > 0 && <p className="text-xs text-red-500">Balance: {formatCurrency(bal)}</p>}

@@ -29,13 +29,21 @@ export function CustomerPaymentsPage() {
     <div className="space-y-6">
       <PageHeader title="Customer Payments" description="Manage payments received from customers" action={{ label: 'Add Payment', onClick: () => navigate('/customer-payments/new') }} />
       <div className="card p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search payment #, customer..." className="input-field has-icon" />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex flex-1 items-center gap-3 flex-wrap">
+            <div className="relative flex-1 min-w-[200px] max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search payment #, customer..." className="input-field has-icon" />
+            </div>
+            <div className="w-48">
+              <SearchableSelect placeholder="All Status" options={statusOptions} value={status} onChange={setStatus} />
+            </div>
           </div>
-          <SearchableSelect placeholder="All Status" options={statusOptions} value={status} onChange={setStatus} />
-          <Button variant="ghost" icon={RotateCcw} onClick={() => { setSearch(''); setStatus(''); }}>Reset</Button>
+          
+          <div className="bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2 flex items-center gap-2 shadow-sm shrink-0">
+            <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Total Received:</span>
+            <span className="text-sm font-bold text-neutral-900 font-mono">{formatCurrency(payments.reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0))}</span>
+          </div>
         </div>
       </div>
       {isLoading ? <CardSkeleton count={6} /> : isError ? (

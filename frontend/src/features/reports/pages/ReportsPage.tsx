@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { useQuery } from '@tanstack/react-query';
 import { reportsApi } from '@/services/api-endpoints';
-import { formatCurrency } from '@/utils/format';
+import { formatCurrency, getLocalDateString } from '@/utils/format';
 import { BarChart3, Download, TrendingUp, TrendingDown, Package, DollarSign, Users, Truck, AlertTriangle } from 'lucide-react';
 
 // ── formatting helpers ─────────────────────────────────────────────
@@ -19,7 +19,7 @@ const fmtDate = (v: any) =>
   v ? new Date(String(v)).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
 
 type Col = { key: string; header: string; render?: (r: any) => ReactNode; className?: string; hideOnMobile?: boolean };
-type Stat = { label: string; value: string };
+type Stat = { label: string; value: string; color?: string };
 
 interface ReportConfig {
   key: string;
@@ -51,8 +51,8 @@ const REPORTS: ReportConfig[] = [
       return [
         { label: 'Invoices', value: String(s.total_invoices ?? 0) },
         { label: 'Total Sales', value: money(s.total_sales) },
-        { label: 'Collected', value: money(s.total_paid) },
-        { label: 'Outstanding', value: money(s.total_outstanding) },
+        { label: 'Collected', value: money(s.total_paid), color: 'text-emerald-600' },
+        { label: 'Outstanding', value: money(s.total_outstanding), color: 'text-red-600' },
         { label: 'Tax', value: money(s.total_tax) },
       ];
     },
@@ -74,8 +74,8 @@ const REPORTS: ReportConfig[] = [
       return [
         { label: 'Purchases', value: String(s.total_purchases ?? 0) },
         { label: 'Total Amount', value: money(s.total_amount) },
-        { label: 'Paid', value: money(s.total_paid) },
-        { label: 'Outstanding', value: money(s.total_outstanding) },
+        { label: 'Paid', value: money(s.total_paid), color: 'text-emerald-600' },
+        { label: 'Outstanding', value: money(s.total_outstanding), color: 'text-red-600' },
         { label: 'Tax', value: money(s.total_tax) },
       ];
     },
@@ -168,9 +168,9 @@ const REPORTS: ReportConfig[] = [
     columns: [
       { key: 'customer_name', header: 'Customer', render: (r) => r.customer_name || `#${r.customer_id}` },
       { key: 'mobile', header: 'Mobile', hideOnMobile: true, render: (r) => r.mobile || '-' },
-      { key: 'outstanding', header: 'Outstanding', className: 'text-right font-semibold', render: (r) => money(r.outstanding) },
+      { key: 'outstanding', header: 'Outstanding', className: 'text-right font-semibold text-red-600', render: (r) => money(r.outstanding) },
     ],
-    stats: (d) => [{ label: 'Total Outstanding', value: money(d?.total_outstanding) }],
+    stats: (d) => [{ label: 'Total Outstanding', value: money(d?.total_outstanding), color: 'text-red-600' }],
   },
   {
     key: 'supplier-outstanding', label: 'Supplier Outstanding', icon: Truck, filter: 'none',
@@ -185,10 +185,42 @@ const REPORTS: ReportConfig[] = [
   },
 ];
 
-const todayStr = () => new Date().toISOString().split('T')[0];
+const todayStr = () => getLocalDateString();
 const monthStartStr = () => {
   const d = new Date();
-  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
+  const tzOffset = 5.5 * 60 * 60 * 1000;
+  const localDate = new Date(d.getTime() + tzOffset);
+  return `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-01`;
+};
+
+const getThemeClasses = (key: string, active: boolean) => {
+  if (!active) {
+    return {
+      tab: 'text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900 border border-transparent',
+      icon: 'text-neutral-400'
+    };
+  }
+  switch (key) {
+    case 'sales':
+    case 'daily-sales':
+      return { tab: 'bg-blue-50 text-blue-700 border border-blue-200/60 shadow-sm', icon: 'text-blue-600' };
+    case 'purchases':
+      return { tab: 'bg-indigo-50 text-indigo-700 border border-indigo-200/60 shadow-sm', icon: 'text-indigo-600' };
+    case 'stock':
+      return { tab: 'bg-amber-50 text-amber-700 border border-amber-200/60 shadow-sm', icon: 'text-amber-600' };
+    case 'profit':
+      return { tab: 'bg-emerald-50 text-emerald-700 border border-emerald-200/60 shadow-sm', icon: 'text-emerald-600' };
+    case 'gst':
+      return { tab: 'bg-purple-50 text-purple-700 border border-purple-200/60 shadow-sm', icon: 'text-purple-600' };
+    case 'low-stock':
+      return { tab: 'bg-red-50 text-red-700 border border-red-200/60 shadow-sm', icon: 'text-red-600' };
+    case 'customer-outstanding':
+      return { tab: 'bg-orange-50 text-orange-700 border border-orange-200/60 shadow-sm', icon: 'text-orange-600' };
+    case 'supplier-outstanding':
+      return { tab: 'bg-cyan-50 text-cyan-700 border border-cyan-200/60 shadow-sm', icon: 'text-cyan-600' };
+    default:
+      return { tab: 'bg-primary-50 text-primary-700 border border-primary-100/50 shadow-sm', icon: 'text-primary-600' };
+  }
 };
 
 export function ReportsPage() {
@@ -218,13 +250,15 @@ export function ReportsPage() {
     if (isError) return <EmptyState icon="error" title="Failed to load report" action={{ label: 'Retry', onClick: () => refetch() }} />;
 
     return (
-      <div className="space-y-5">
+      <div className="space-y-6">
         {stats.length > 0 && (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-4">
             {stats.map(s => (
-              <div key={s.label} className="rounded-xl border border-neutral-200 bg-white p-4">
-                <p className="text-xs text-neutral-500">{s.label}</p>
-                <p className="text-lg font-bold text-neutral-900 mt-1 tabular-nums">{s.value}</p>
+              <div key={s.label} className="p-1 rounded-2xl bg-neutral-50 border border-neutral-200/60 shadow-sm transition-all duration-300 hover:shadow-md hover:border-neutral-300/80">
+                <div className="bg-white rounded-xl p-4 border border-white shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
+                  <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">{s.label}</p>
+                  <p className={`text-xl font-bold mt-2 font-mono tabular-nums leading-none ${s.color || 'text-neutral-900'}`}>{s.value}</p>
+                </div>
               </div>
             ))}
           </div>
@@ -232,7 +266,9 @@ export function ReportsPage() {
 
         {config.columns && (
           rows.length > 0 ? (
-            <DataTable data={rows} keyExtractor={(item: any, i: number) => item.id ?? item.product_id ?? item.customer_id ?? item.supplier_id ?? i} columns={config.columns} />
+            <div className="border border-neutral-200 rounded-2xl overflow-hidden shadow-sm">
+              <DataTable data={rows} keyExtractor={(item: any, i: number) => item.id ?? item.product_id ?? item.customer_id ?? item.supplier_id ?? i} columns={config.columns} />
+            </div>
           ) : (
             <EmptyState icon={config.icon} title="No records" description={config.emptyMessage || 'No records found for the selected period.'} />
           )
@@ -245,34 +281,64 @@ export function ReportsPage() {
     <div className="space-y-6">
       <PageHeader title="Reports" description="Business intelligence and analytics — live from your data" />
 
-      <div className="flex flex-wrap gap-2">
-        {REPORTS.map(rt => (
-          <Button
-            key={rt.key}
-            variant={reportType === rt.key ? 'primary' : 'ghost'}
-            size="sm"
-            icon={rt.icon}
-            onClick={() => setReportType(rt.key)}
-          >
-            {rt.label}
-          </Button>
-        ))}
+      {/* Horizontal Category Selector */}
+      <div className="bg-white border border-neutral-200 rounded-2xl p-2 flex flex-wrap gap-1.5 shadow-sm">
+        {REPORTS.map(rt => {
+          const IconComponent = rt.icon;
+          const active = reportType === rt.key;
+          const theme = getThemeClasses(rt.key, active);
+          return (
+            <button
+              key={rt.key}
+              type="button"
+              onClick={() => setReportType(rt.key)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${theme.tab}`}
+            >
+              <IconComponent className={`w-4 h-4 ${theme.icon}`} />
+              <span>{rt.label}</span>
+            </button>
+          );
+        })}
       </div>
 
-      <div className="card p-4">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-4">
-          <h3 className="text-lg font-semibold text-neutral-900">{config.label}</h3>
-          <div className="flex items-end gap-2">
+      {/* Active Report Content */}
+      <div className="bg-white border border-neutral-200 rounded-2xl p-6 space-y-6 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-neutral-100">
+          <div>
+            <h3 className="text-lg font-bold text-neutral-900">{config.label}</h3>
+            <p className="text-xs text-neutral-400 mt-0.5">Filter results and export data</p>
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             {config.filter === 'range' && (
-              <>
-                <DatePicker label="From" value={dateFrom} onChange={setDateFrom} />
-                <DatePicker label="To" value={dateTo} onChange={setDateTo} align="right" />
-              </>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Date Range</span>
+                <div className="flex items-center gap-2 bg-neutral-50 p-1.5 rounded-xl border border-neutral-200 h-[48px]">
+                  <DatePicker value={dateFrom} onChange={setDateFrom} placeholder="From" className="!py-1.5 !px-2.5 !h-[36px] !w-[115px] text-xs sm:text-sm" />
+                  <span className="text-neutral-400 text-xs font-medium">to</span>
+                  <DatePicker value={dateTo} onChange={setDateTo} align="right" placeholder="To" className="!py-1.5 !px-2.5 !h-[36px] !w-[115px] text-xs sm:text-sm" />
+                </div>
+              </div>
             )}
             {config.filter === 'date' && (
-              <DatePicker label="Date" value={singleDate} onChange={setSingleDate} align="right" />
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Date</span>
+                <div className="bg-neutral-50 p-1.5 rounded-xl border border-neutral-200 h-[48px] flex items-center">
+                  <DatePicker value={singleDate} onChange={setSingleDate} align="right" placeholder="Select Date" className="!py-1.5 !px-2.5 !h-[36px] !w-[120px] text-xs sm:text-sm" />
+                </div>
+              </div>
             )}
-            <Button size="sm" variant="ghost" icon={Download} onClick={() => window.print()}>Export</Button>
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-transparent select-none uppercase tracking-wider hidden sm:block">Action</span>
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                icon={Download} 
+                onClick={() => window.print()}
+                className="!py-2.5 !px-4 rounded-xl border border-neutral-200 hover:bg-neutral-50 shadow-sm transition-all h-[48px] flex items-center justify-center"
+              >
+                Export
+              </Button>
+            </div>
           </div>
         </div>
         {renderBody()}

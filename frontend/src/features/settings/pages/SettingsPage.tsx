@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { CardSkeleton } from '@/components/ui/Skeleton';
 import { Button } from '@/components/ui/Button';
@@ -157,6 +158,54 @@ export function SettingsPage() {
           </div>
         );
       })}
+
+      {/* System Modules Quick Access */}
+      <div className="card">
+        <div className="flex items-center gap-3 px-6 py-4 border-b border-neutral-100">
+          <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+            <Building2 className="w-4 h-4 text-indigo-600" />
+          </div>
+          <h3 className="font-semibold text-neutral-900">System Modules (Quick Access)</h3>
+        </div>
+        <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Link to="/purchase-returns" className="flex items-center justify-between p-4 rounded-xl border border-neutral-200 hover:bg-neutral-50 transition-all group">
+            <div>
+              <h4 className="font-semibold text-neutral-800 text-sm">Returns</h4>
+              <p className="text-xs text-neutral-400 mt-0.5">Manage customer & purchase returns</p>
+            </div>
+            <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center group-hover:bg-primary-50 transition-all">
+              <span className="text-neutral-500 group-hover:text-primary-600 font-semibold text-sm">→</span>
+            </div>
+          </Link>
+          <Link to="/stock-transfers" className="flex items-center justify-between p-4 rounded-xl border border-neutral-200 hover:bg-neutral-50 transition-all group">
+            <div>
+              <h4 className="font-semibold text-neutral-800 text-sm">Transfers</h4>
+              <p className="text-xs text-neutral-400 mt-0.5">Transfer inventory between stores</p>
+            </div>
+            <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center group-hover:bg-primary-50 transition-all">
+              <span className="text-neutral-500 group-hover:text-primary-600 font-semibold text-sm">→</span>
+            </div>
+          </Link>
+          <Link to="/users" className="flex items-center justify-between p-4 rounded-xl border border-neutral-200 hover:bg-neutral-50 transition-all group">
+            <div>
+              <h4 className="font-semibold text-neutral-800 text-sm">Users & Roles</h4>
+              <p className="text-xs text-neutral-400 mt-0.5">Manage staff access & roles</p>
+            </div>
+            <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center group-hover:bg-primary-50 transition-all">
+              <span className="text-neutral-500 group-hover:text-primary-600 font-semibold text-sm">→</span>
+            </div>
+          </Link>
+          <Link to="/audit-logs" className="flex items-center justify-between p-4 rounded-xl border border-neutral-200 hover:bg-neutral-50 transition-all group">
+            <div>
+              <h4 className="font-semibold text-neutral-800 text-sm">Audit Logs</h4>
+              <p className="text-xs text-neutral-400 mt-0.5">View system logs & track actions</p>
+            </div>
+            <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center group-hover:bg-primary-50 transition-all">
+              <span className="text-neutral-500 group-hover:text-primary-600 font-semibold text-sm">→</span>
+            </div>
+          </Link>
+        </div>
+      </div>
 
       <div className="flex justify-end">
         <Button onClick={handleSave} loading={saving} icon={Save} size="lg">Save Settings</Button>

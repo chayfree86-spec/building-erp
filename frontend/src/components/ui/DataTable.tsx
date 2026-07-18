@@ -56,7 +56,13 @@ export function DataTable<T>({
           <thead>
             <tr className="border-b border-neutral-100 bg-neutral-50/50">
               {columns.map(col => (
-                <th key={col.key} className={`text-left py-3 px-4 text-xs font-semibold text-neutral-500 uppercase tracking-wider ${col.className || ''}`}>
+                <th 
+                  key={col.key} 
+                  className={`py-3 px-4 text-xs font-semibold text-neutral-500 uppercase tracking-wider ${
+                    col.className?.includes('text-right') ? 'text-right' : 
+                    col.className?.includes('text-center') ? 'text-center' : 'text-left'
+                  } ${col.className || ''}`}
+                >
                   {col.header}
                 </th>
               ))}

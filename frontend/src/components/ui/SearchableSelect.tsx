@@ -1,10 +1,11 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, type ReactNode } from 'react';
 import { Search, ChevronDown, X } from 'lucide-react';
 
 interface Option {
   value: string | number;
   label: string;
-  sub?: string;
+  sub?: ReactNode;
+  subSearch?: string;
 }
 
 interface SearchableSelectProps {
@@ -38,7 +39,10 @@ export function SearchableSelect({
 
   const selected = options.find(o => String(o.value) === String(value));
   const filtered = options.filter(o =>
-    !search || o.label.toLowerCase().includes(search.toLowerCase()) || o.sub?.toLowerCase().includes(search.toLowerCase())
+    !search || 
+    o.label.toLowerCase().includes(search.toLowerCase()) || 
+    (typeof o.sub === 'string' && o.sub.toLowerCase().includes(search.toLowerCase())) ||
+    (o.subSearch && o.subSearch.toLowerCase().includes(search.toLowerCase()))
   );
 
   const btnClass = compact

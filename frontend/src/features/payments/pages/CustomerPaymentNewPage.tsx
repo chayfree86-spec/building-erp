@@ -245,7 +245,18 @@ export function CustomerPaymentNewPage() {
             ) : (
               <SearchableSelect
                 label="Customer *"
-                options={customers.map(c => ({ value: c.id, label: c.name, sub: c.mobile || '' }))}
+                options={customers.map(c => ({
+                  value: c.id,
+                  label: c.name,
+                  sub: (
+                    <span className="flex items-center gap-1.5">
+                      {c.mobile && <span>{c.mobile}</span>}
+                      {c.mobile && <span className="text-neutral-300">•</span>}
+                      <span>Outstanding: <span className="text-red-600 font-semibold">{formatCurrency(c.outstanding_balance || 0)}</span></span>
+                    </span>
+                  ),
+                  subSearch: [c.mobile, c.outstanding_balance !== undefined ? String(c.outstanding_balance) : ''].filter(Boolean).join(' ')
+                }))}
                 value={customerId || ''}
                 onChange={(val) => {
                   const id = Number(val); setValue('customer_id', id);

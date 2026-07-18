@@ -239,7 +239,18 @@ export function SupplierPaymentNewPage() {
             ) : (
               <SearchableSelect
                 label="Supplier *"
-                options={suppliers.map(s => ({ value: s.id, label: s.name, sub: s.mobile || '' }))}
+                options={suppliers.map(s => ({
+                  value: s.id,
+                  label: s.name,
+                  sub: (
+                    <span className="flex items-center gap-1.5">
+                      {s.mobile && <span>{s.mobile}</span>}
+                      {s.mobile && <span className="text-neutral-300">•</span>}
+                      <span>Outstanding: <span className="text-red-600 font-semibold">{formatCurrency(s.outstanding_balance || 0)}</span></span>
+                    </span>
+                  ),
+                  subSearch: [s.mobile, s.outstanding_balance !== undefined ? String(s.outstanding_balance) : ''].filter(Boolean).join(' ')
+                }))}
                 value={supplierId || ''}
                 onChange={(val) => {
                   const id = Number(val); setValue('supplier_id', id);
