@@ -288,7 +288,7 @@ export function StockPage() {
         </div>
 
         {/* Row 2: Advanced Dropdown Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-2 border-t border-neutral-100">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 pt-2 border-t border-neutral-100">
           <div>
             <label className="text-xs font-semibold text-neutral-500 block mb-1">Category</label>
             <SearchableSelect
@@ -325,27 +325,25 @@ export function StockPage() {
               placeholder="Select Month"
             />
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-xs font-semibold text-neutral-500 block mb-1">From Date</label>
-              <DatePicker
-                value={dateFrom}
-                onChange={(val) => setDateFrom(val)}
-                placeholder="From Date"
-                className="py-1.5 text-xs w-full"
-                align="right"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-neutral-500 block mb-1">To Date</label>
-              <DatePicker
-                value={dateTo}
-                onChange={(val) => setDateTo(val)}
-                placeholder="To Date"
-                className="py-1.5 text-xs w-full"
-                align="right"
-              />
-            </div>
+          <div>
+            <label className="text-xs font-semibold text-neutral-500 block mb-1">From Date</label>
+            <DatePicker
+              value={dateFrom}
+              onChange={(val) => setDateFrom(val)}
+              placeholder="From Date"
+              className="py-1.5 text-xs w-full"
+              align="right"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-neutral-500 block mb-1">To Date</label>
+            <DatePicker
+              value={dateTo}
+              onChange={(val) => setDateTo(val)}
+              placeholder="To Date"
+              className="py-1.5 text-xs w-full"
+              align="right"
+            />
           </div>
         </div>
       </div>

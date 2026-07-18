@@ -19,7 +19,7 @@ import type { Supplier } from '@/types';
 
 const baseSupplierFields: FieldDef[] = [
   { key: 'name', label: 'Supplier Name', required: true, placeholder: 'Company or individual name' },
-  { key: 'category_id', label: 'Supplier Category', type: 'select', options: [], placeholder: 'Select category' },
+  { key: 'category_ids', label: 'Supplier Categories', type: 'multiselect', options: [], placeholder: 'Select categories' },
   { key: 'mobile', label: 'Mobile', placeholder: '10-digit mobile number' },
   { key: 'email', label: 'Email', placeholder: 'supplier@example.com' },
   { key: 'gst_number', label: 'GST Number', placeholder: 'GSTIN' },
@@ -48,7 +48,7 @@ export function SuppliersPage() {
   const totalOutstanding = suppliers.reduce((sum: number, s: Supplier) => sum + (Number(s.outstanding_balance ?? s.opening_balance) || 0), 0);
 
   const dynamicFields = baseSupplierFields.map(f => {
-    if (f.key === 'category_id') {
+    if (f.key === 'category_ids') {
       return {
         ...f,
         options: categories.map(c => ({ value: String(c.id), label: c.name })),
@@ -60,9 +60,11 @@ export function SuppliersPage() {
   const handleSave = async (formData: Record<string, any>) => {
     const payload = {
       ...formData,
-      category_id: formData.category_id ? Number(formData.category_id) : null,
+      category_ids: Array.isArray(formData.category_ids) ? formData.category_ids.map(Number) : [],
       opening_balance: Number(formData.opening_balance) || 0,
     };
+    delete (payload as any).category_id;
+
     if (editingItem?.id) { await suppliersApi.update(editingItem.id, payload); toast.success('Supplier updated'); }
     else { await suppliersApi.create(payload); toast.success('Supplier created'); }
     queryClient.invalidateQueries({ queryKey: ['suppliers'] });
@@ -98,14 +100,27 @@ export function SuppliersPage() {
                 </div>
                 <div>
                   <p className="font-medium text-neutral-900">{s.name}</p>
-                  <p className="text-xs text-neutral-500">
-                    {s.mobile || 'No mobile'}
-                    {s.category && ` | ${s.category.name}`}
-                  </p>
+                  <p className="text-xs text-neutral-500">{s.mobile || 'No mobile'}</p>
                 </div>
               </div>
             )},
-            { key: 'gst', header: 'GST', hideOnMobile: true, render: (s: Supplier) => s.gst_number || '-' },
+            { key: 'categories', header: 'Categories', hideOnMobile: true, render: (s: Supplier) => (
+              <div className="flex flex-wrap gap-1">
+                {s.categories && s.categories.length > 0 ? (
+                  s.categories.map((c: any) => (
+                    <span key={c.id} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-neutral-100 text-neutral-800 border border-neutral-200">
+                      {c.name}
+                    </span>
+                  ))
+                ) : s.category ? (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-neutral-100 text-neutral-800 border border-neutral-200">
+                    {s.category.name}
+                  </span>
+                ) : (
+                  <span className="text-xs text-neutral-400">-</span>
+                )}
+              </div>
+            )},
             { key: 'balance', header: 'Outstanding', className: 'text-right tabular-nums', render: (s: Supplier) => <span className="font-semibold" style={{ color: '#e25c6a' }}>{formatCurrency(s.outstanding_balance ?? s.opening_balance)}</span> },
             { key: 'status', header: 'Status', render: (s: Supplier) => <StatusBadge status={s.status} /> },
             { key: 'actions', header: 'Actions', className: 'text-right w-36', render: (s: Supplier) => (

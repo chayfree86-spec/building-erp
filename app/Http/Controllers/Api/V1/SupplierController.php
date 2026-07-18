@@ -11,7 +11,7 @@ class SupplierController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Supplier::with(['addresses', 'category']);
+        $query = Supplier::with(['addresses', 'category', 'categories']);
 
         if ($request->status) {
             $query->where('status', $request->status);
@@ -36,6 +36,8 @@ class SupplierController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:200',
             'category_id' => 'nullable|integer|exists:categories,id',
+            'category_ids' => 'nullable|array',
+            'category_ids.*' => 'exists:categories,id',
             'mobile' => 'nullable|string|max:15',
             'alternate_mobile' => 'nullable|string|max:15',
             'email' => 'nullable|email|max:100',
@@ -49,11 +51,19 @@ class SupplierController extends Controller
             $validated['normalized_mobile'] = preg_replace('/[^0-9]/', '', $validated['mobile']);
         }
 
-        $supplier = Supplier::create($validated + ['created_by' => $request->user()->id]);
+        if ($request->has('category_ids')) {
+            $validated['category_id'] = count($request->category_ids) > 0 ? $request->category_ids[0] : null;
+        }
+
+        $supplier = Supplier::create(array_diff_key($validated, ['category_ids' => 1]) + ['created_by' => $request->user()->id]);
+
+        if ($request->has('category_ids')) {
+            $supplier->categories()->sync($request->category_ids);
+        }
 
         return response()->json([
             'success' => true, 'message' => 'Supplier created.',
-            'data' => $supplier->load(['addresses', 'category']), 'errors' => null,
+            'data' => $supplier->load(['addresses', 'category', 'categories']), 'errors' => null,
         ], 201);
     }
 
@@ -61,7 +71,7 @@ class SupplierController extends Controller
     {
         return response()->json([
             'success' => true, 'message' => 'Supplier retrieved.',
-            'data' => Supplier::with(['addresses', 'category'])->findOrFail($id), 'errors' => null,
+            'data' => Supplier::with(['addresses', 'category', 'categories'])->findOrFail($id), 'errors' => null,
         ]);
     }
 
@@ -72,6 +82,8 @@ class SupplierController extends Controller
         $data = $request->validate([
             'name' => 'sometimes|string|max:200',
             'category_id' => 'nullable|integer|exists:categories,id',
+            'category_ids' => 'nullable|array',
+            'category_ids.*' => 'exists:categories,id',
             'mobile' => 'nullable|string|max:15',
             'alternate_mobile' => 'nullable|string|max:15',
             'email' => 'nullable|email|max:100',
@@ -85,11 +97,19 @@ class SupplierController extends Controller
             $data['normalized_mobile'] = preg_replace('/[^0-9]/', '', $data['mobile']);
         }
 
-        $supplier->update($data + ['updated_by' => $request->user()->id]);
+        if ($request->has('category_ids')) {
+            $data['category_id'] = count($request->category_ids) > 0 ? $request->category_ids[0] : null;
+        }
+
+        $supplier->update(array_diff_key($data, ['category_ids' => 1]) + ['updated_by' => $request->user()->id]);
+
+        if ($request->has('category_ids')) {
+            $supplier->categories()->sync($request->category_ids);
+        }
 
         return response()->json([
             'success' => true, 'message' => 'Supplier updated.',
-            'data' => $supplier->load(['addresses', 'category']), 'errors' => null,
+            'data' => $supplier->load(['addresses', 'category', 'categories']), 'errors' => null,
         ]);
     }
 
