@@ -16,11 +16,21 @@ use Illuminate\Support\Facades\DB;
 return new class extends Migration {
     public function up(): void
     {
+        // SQLite stores enums as plain text with no CHECK constraint here, so the
+        // widening is only meaningful (and the MODIFY syntax only valid) on MySQL.
+        if (DB::getDriverName() !== 'mysql') {
+            return;
+        }
+
         DB::statement("ALTER TABLE `stock_adjustments` MODIFY COLUMN `type` ENUM('addition','deduction','damage','increase','decrease','shortage','excess','manual_correction') NOT NULL");
     }
 
     public function down(): void
     {
+        if (DB::getDriverName() !== 'mysql') {
+            return;
+        }
+
         DB::statement("ALTER TABLE `stock_adjustments` MODIFY COLUMN `type` ENUM('increase','decrease','damage','shortage','excess','manual_correction') NOT NULL");
     }
 };
