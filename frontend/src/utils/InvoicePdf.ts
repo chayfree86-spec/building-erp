@@ -74,14 +74,14 @@ export function generateInvoicePdf(invoice: any) {
     headStyles: { fillColor: [79, 70, 229] }, // Indigo
     styles: { fontSize: 8.5, cellPadding: 3, font: 'helvetica' },
     columnStyles: {
-      0: { width: 8 },
+      0: { cellWidth: 8 },
       1: { cellWidth: 'auto' },
-      2: { halign: 'right', width: 15 },
-      3: { halign: 'center', width: 15 },
-      4: { halign: 'right', width: 22 },
-      5: { halign: 'right', width: 20 },
-      6: { halign: 'right', width: 15 },
-      7: { halign: 'right', width: 24 },
+      2: { halign: 'right', cellWidth: 15 },
+      3: { halign: 'center', cellWidth: 15 },
+      4: { halign: 'right', cellWidth: 22 },
+      5: { halign: 'right', cellWidth: 20 },
+      6: { halign: 'right', cellWidth: 15 },
+      7: { halign: 'right', cellWidth: 24 },
     },
   });
 
@@ -123,4 +123,6 @@ export function generateInvoicePdf(invoice: any) {
   doc.setTextColor(120, 120, 120);
   doc.text('Thank you for your business!', 15, 280);
   doc.text('This is a computer-generated invoice and requires no signature.', 15, 285);
+
+  return doc;
 }

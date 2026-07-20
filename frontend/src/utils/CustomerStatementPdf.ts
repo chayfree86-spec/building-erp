@@ -81,13 +81,13 @@ export function generateCustomerStatementPdf({
     headStyles: { fillColor: [37, 99, 235] }, // Royal Blue
     styles: { fontSize: 8.5, cellPadding: 3, font: 'helvetica' },
     columnStyles: {
-      0: { width: 22 },
-      1: { width: 22 },
-      2: { width: 22 },
+      0: { cellWidth: 22 },
+      1: { cellWidth: 22 },
+      2: { cellWidth: 22 },
       3: { cellWidth: 'auto' },
-      4: { halign: 'right', width: 24 },
-      5: { halign: 'right', width: 24 },
-      6: { halign: 'right', width: 26 },
+      4: { halign: 'right', cellWidth: 24 },
+      5: { halign: 'right', cellWidth: 24 },
+      6: { halign: 'right', cellWidth: 26 },
     },
   });
 

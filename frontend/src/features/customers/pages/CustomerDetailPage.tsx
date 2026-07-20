@@ -633,11 +633,11 @@ export function CustomerDetailPage() {
 
       {/* Edit Customer Modal */}
       <MasterFormModal
-        isOpen={modalOpen}
+        open={modalOpen}
         onClose={() => setModalOpen(false)}
         title="Edit Customer"
         fields={customerFields}
-        defaultValues={editDefaultValues}
+        initialData={editDefaultValues}
         onSave={handleSave}
       />
 
