@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1;
 
@@ -8,6 +9,30 @@ use App\Http\Controllers\Api\V1;
 | API Routes - Building ERP v1
 |--------------------------------------------------------------------------
 */
+
+// Public health check — verifies the API is reachable and the DB is connected.
+Route::get('health', function () {
+    try {
+        DB::connection()->getPdo();
+        $usersCount = DB::table('users')->count();
+
+        return response()->json([
+            'success' => true,
+            'api' => 'ok',
+            'database' => 'connected',
+            'db_name' => DB::connection()->getDatabaseName(),
+            'users_count' => $usersCount,
+            'timestamp' => now()->toIso8601String(),
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'success' => false,
+            'api' => 'ok',
+            'database' => 'disconnected',
+            'error' => $e->getMessage(),
+        ], 500);
+    }
+});
 
 Route::prefix('v1')->group(function () {
 
