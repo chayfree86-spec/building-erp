@@ -668,7 +668,15 @@ export function InvoiceNewPage() {
                     {items.map((item, idx) => {
                       const product = products.find(p => p.id === Number(item.product_id));
                       const category = product ? categories.find(c => Number(c.id) === Number(product.category_id)) : null;
-                      const allowedUnits = category?.units || [];
+                      // Prefer the product's own allowed units (e.g. a specific tile's
+                      // sizes); fall back to the category-wide list. The product's own
+                      // default unit is always included even if it wasn't separately
+                      // checked in "Additional Units".
+                      const productUnitsRaw = product?.units || [];
+                      const productUnits = (product?.unit && !productUnitsRaw.some((u: any) => u.id === product.unit!.id))
+                        ? [product.unit, ...productUnitsRaw]
+                        : productUnitsRaw;
+                      const allowedUnits = productUnits.length > 0 ? productUnits : (category?.units || []);
                       const unitOptions = allowedUnits.length > 0
                         ? allowedUnits.map((u: any) => ({ value: u.id, label: u.short_name }))
                         : (product?.unit ? [{ value: product.unit.id, label: product.unit.short_name }] : []);

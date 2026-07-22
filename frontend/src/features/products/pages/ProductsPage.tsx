@@ -10,7 +10,7 @@ import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { Button } from '@/components/ui/Button';
 import { MasterFormModal, type FieldDef } from '@/components/shared/MasterFormModal';
 import { useProducts, useCategories, useBrands, useUnits, useGstRates } from '../api/queries';
-import { productsApi } from '@/services/api-endpoints';
+import { productsApi, brandsApi, categoriesApi } from '@/services/api-endpoints';
 import { Search, RotateCcw, Package, Pencil, Trash2, Plus, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { Product } from '@/types';
@@ -19,7 +19,8 @@ const productFields: FieldDef[] = [
   { key: 'name', label: 'Product Name', required: true, placeholder: 'e.g. OPC Cement 53 Grade' },
   { key: 'sku', label: 'SKU Code', required: true, placeholder: 'e.g. CEM-001' },
   { key: 'category_id', label: 'Category', type: 'select', placeholder: 'Select category' },
-  { key: 'unit_id', label: 'Unit', type: 'select', required: true, placeholder: 'Select unit' },
+  { key: 'unit_id', label: 'Default Unit', type: 'select', required: true, placeholder: 'Select unit' },
+  { key: 'unit_ids', label: 'Additional Units (e.g. tile sizes: Box, Sq.Ft)', type: 'multiselect', options: [] },
   { key: 'brand_ids', label: 'Brands', type: 'multiselect', options: [] },
   { key: 'gst_rate_id', label: 'GST Rate', type: 'select', required: true, placeholder: 'Select GST rate' },
   { key: 'barcode', label: 'Barcode', placeholder: 'Scan or enter barcode' },
@@ -134,22 +135,65 @@ export function ProductsPage() {
         }
       };
     }
-    if (f.key === 'brand_ids') {
+    if (f.key === 'unit_ids') {
       return {
         ...f,
+        // Suggestions come from the selected category's allowed units, but
+        // whatever units this specific product already has assigned are
+        // always included too — otherwise switching category (or a stale
+        // assignment from before) would hide a unit with no way to uncheck it.
         options: (formData: Record<string, any>) => {
           const selectedCatId = Number(formData.category_id);
           const catList = Array.isArray(categories) ? categories : [];
-          const brandList = Array.isArray(brands) ? brands : [];
-
-          if (selectedCatId) {
-            const cat = catList.find(c => c.id === selectedCatId);
-            if (cat && cat.brands && cat.brands.length > 0) {
-              return cat.brands.map(b => ({ value: String(b.id), label: b.name }));
-            }
-          }
-          return brandList.map(b => ({ value: String(b.id), label: b.name }));
+          const unitList = Array.isArray(units) ? units : [];
+          const cat = selectedCatId ? catList.find(c => c.id === selectedCatId) : null;
+          const suggested = (cat?.units && cat.units.length > 0) ? cat.units : unitList;
+          const existing = editingProduct?.units || [];
+          const merged = [...suggested];
+          existing.forEach((u: any) => { if (!merged.some((m: any) => m.id === u.id)) merged.push(u); });
+          return merged.map((u: any) => ({ value: String(u.id), label: `${u.name} (${u.short_name})` }));
         }
+      };
+    }
+    if (f.key === 'brand_ids') {
+      return {
+        ...f,
+        // Brands are scoped to the selected category's allowed-brand list.
+        // If the category has none configured yet, show no suggestions at
+        // all — the "not listed?" custom field below is how a brand gets
+        // added (and it becomes a suggestion for this category from then on).
+        // Whatever brands this specific product already has assigned are
+        // always included too, so an out-of-category / legacy assignment
+        // stays visible and can be unchecked instead of being stuck forever.
+        options: (formData: Record<string, any>) => {
+          const selectedCatId = Number(formData.category_id);
+          const catList = Array.isArray(categories) ? categories : [];
+          const cat = selectedCatId ? catList.find(c => c.id === selectedCatId) : null;
+          const suggested = cat?.brands || [];
+          const existing = editingProduct?.brands || [];
+          const merged = [...suggested];
+          existing.forEach((b: any) => { if (!merged.some((m: any) => m.id === b.id)) merged.push(b); });
+          return merged.map((b: any) => ({ value: String(b.id), label: b.name }));
+        },
+        allowCustom: true,
+        onCreateCustom: async (label: string, formData: Record<string, any>) => {
+          const { data } = await brandsApi.create({ name: label, status: 'active' });
+          const newBrand = data.data || data;
+
+          // Attach the new brand to the selected category's allowed-brand
+          // list too, so it shows up as a normal checkbox next time.
+          const selectedCatId = Number(formData.category_id);
+          if (selectedCatId) {
+            const catList = Array.isArray(categories) ? categories : [];
+            const cat = catList.find(c => c.id === selectedCatId);
+            const existingBrandIds = (cat?.brands || []).map((b: any) => b.id);
+            await categoriesApi.update(selectedCatId, { brand_ids: [...existingBrandIds, newBrand.id] });
+          }
+
+          queryClient.invalidateQueries({ queryKey: ['categories'] });
+          queryClient.invalidateQueries({ queryKey: ['brands'] });
+          return { value: String(newBrand.id), label: newBrand.name };
+        },
       };
     }
     if (f.key === 'gst_rate_id') return { ...f, options: gstOptions };
@@ -161,6 +205,7 @@ export function ProductsPage() {
       ...formData,
       category_id: Number(formData.category_id) || null,
       unit_id: Number(formData.unit_id) || 0,
+      unit_ids: Array.isArray(formData.unit_ids) ? formData.unit_ids.map(Number) : [],
       brand_ids: Array.isArray(formData.brand_ids) ? formData.brand_ids.map(Number) : [],
       gst_rate_id: Number(formData.gst_rate_id) || 0,
       minimum_stock: Number(formData.minimum_stock) || 0,
@@ -233,7 +278,12 @@ export function ProductsPage() {
             )},
             { key: 'category', header: 'Category', hideOnMobile: true, render: (p: Product) => p.category?.name || '-' },
             { key: 'brands', header: 'Brands', hideOnMobile: true, render: (p: Product) => p.brands && p.brands.length > 0 ? p.brands.map(b => b.name).join(', ') : '-' },
-            { key: 'unit', header: 'Unit', hideOnMobile: true, render: (p: Product) => p.unit?.short_name || '-' },
+            { key: 'unit', header: 'Unit', hideOnMobile: true, render: (p: Product) => {
+              const names = new Set<string>();
+              if (p.unit?.short_name) names.add(p.unit.short_name);
+              (p.units || []).forEach(u => u.short_name && names.add(u.short_name));
+              return names.size > 0 ? [...names].join(', ') : '-';
+            }},
             { key: 'gst', header: 'GST', hideOnMobile: true, render: (p: Product) => p.gst_rate ? `${Number(p.gst_rate.rate)}%` : '-' },
             { key: 'status', header: 'Status', render: (p: Product) => <StatusBadge status={p.status} /> },
             { key: 'actions', header: '', hideOnMobile: true, className: 'text-right w-24', render: (p: Product) => (

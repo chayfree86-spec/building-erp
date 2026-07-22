@@ -120,6 +120,7 @@ export interface Product {
   id: number;
   category_id: number | null;
   unit_id: number;
+  unit_ids?: number[];
   brand_ids?: number[];
   gst_rate_id: number;
   name: string;
@@ -131,6 +132,7 @@ export interface Product {
   status: 'active' | 'inactive';
   category?: Category;
   unit?: Unit;
+  units?: Unit[];
   brands?: Brand[];
   gst_rate?: GstRate;
   barcodes?: ProductBarcode[];

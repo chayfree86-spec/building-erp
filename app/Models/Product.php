@@ -44,6 +44,11 @@ class Product extends Model
         return $this->belongsToMany(Brand::class, 'product_brands');
     }
 
+    public function units(): BelongsToMany
+    {
+        return $this->belongsToMany(Unit::class, 'product_units');
+    }
+
     public function gstRate(): BelongsTo
     {
         return $this->belongsTo(GstRate::class);

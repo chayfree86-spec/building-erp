@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
-import { X, Save } from 'lucide-react';
+import { X, Save, Plus, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export interface FieldDef {
@@ -12,6 +12,11 @@ export interface FieldDef {
   required?: boolean;
   options?: { value: string; label: string }[] | ((formData: Record<string, any>) => { value: string; label: string }[]);
   defaultValue?: string;
+  /** multiselect only: lets the user type a name that isn't in `options` yet.
+   * `onCreateCustom` is called to create the real master record (e.g. a new
+   * Brand), and the returned option is auto-checked. Never required. */
+  allowCustom?: boolean;
+  onCreateCustom?: (label: string, formData: Record<string, any>) => Promise<{ value: string; label: string }>;
 }
 
 interface MasterFormModalProps {
@@ -28,6 +33,12 @@ export function MasterFormModal({ open, onClose, title, fields, initialData, onS
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // Options created on the fly via a field's `allowCustom` input, keyed by field key.
+  // Kept separate from `options` since the parent's master list won't include
+  // them until it refetches.
+  const [customOptions, setCustomOptions] = useState<Record<string, { value: string; label: string }[]>>({});
+  const [customInputs, setCustomInputs] = useState<Record<string, string>>({});
+  const [customSaving, setCustomSaving] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (open) {
@@ -54,14 +65,39 @@ export function MasterFormModal({ open, onClose, title, fields, initialData, onS
       });
       setFormData(init);
       setErrors({});
+      setCustomOptions({});
+      setCustomInputs({});
     }
-  }, [open, initialData, fields]);
+    // Deliberately NOT depending on `fields`: parents often recompute their
+    // fields array (new reference) after an unrelated query invalidation —
+    // e.g. `onCreateCustom` refetching brands/categories — which would
+    // otherwise reset formData and silently drop whatever the user just
+    // selected.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialData]);
 
   if (!open) return null;
 
   const handleChange = (key: string, value: any) => {
     setFormData(prev => ({ ...prev, [key]: value }));
     if (errors[key]) setErrors(prev => ({ ...prev, [key]: '' }));
+  };
+
+  const handleAddCustom = async (f: FieldDef) => {
+    const label = (customInputs[f.key] || '').trim();
+    if (!label || !f.onCreateCustom) return;
+    setCustomSaving(prev => ({ ...prev, [f.key]: true }));
+    try {
+      const opt = await f.onCreateCustom(label, formData);
+      setCustomOptions(prev => ({ ...prev, [f.key]: [...(prev[f.key] || []), opt] }));
+      const values = Array.isArray(formData[f.key]) ? formData[f.key] : [];
+      handleChange(f.key, [...values, Number(opt.value)]);
+      setCustomInputs(prev => ({ ...prev, [f.key]: '' }));
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || `Failed to add "${label}"`);
+    } finally {
+      setCustomSaving(prev => ({ ...prev, [f.key]: false }));
+    }
   };
 
   const validate = (): boolean => {
@@ -118,34 +154,65 @@ export function MasterFormModal({ open, onClose, title, fields, initialData, onS
                   <span className="text-sm text-neutral-700">{formData[f.key] === 'active' || formData[f.key] === 'true' || formData[f.key] === '1' ? 'Active' : 'Inactive'}</span>
                 </label>
               ) : f.type === 'multiselect' ? (
-                <div className="grid grid-cols-2 gap-2 mt-1">
-                  {(() => {
-                    const resolvedOptions = typeof f.options === 'function' ? f.options(formData) : f.options;
-                    return resolvedOptions?.map(o => {
-                      const values = Array.isArray(formData[f.key]) ? formData[f.key] : [];
-                      const isChecked = values.includes(Number(o.value)) || values.includes(String(o.value));
-                      return (
-                        <label key={o.value} className="flex items-center gap-2 p-2 rounded-xl border border-neutral-100 hover:bg-neutral-50/50 cursor-pointer text-sm">
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={e => {
-                              const numVal = Number(o.value);
-                              let newValues;
-                              if (e.target.checked) {
-                                newValues = [...values, numVal];
-                              } else {
-                                newValues = values.filter((v: any) => Number(v) !== numVal);
-                              }
-                              handleChange(f.key, newValues);
-                            }}
-                            className="w-4 h-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
-                          />
-                          <span className="text-neutral-700">{o.label}</span>
-                        </label>
-                      );
-                    });
-                  })()}
+                <div className="mt-1">
+                  <div className="grid grid-cols-2 gap-2">
+                    {(() => {
+                      const resolvedOptions = typeof f.options === 'function' ? f.options(formData) : f.options;
+                      const merged = [...(resolvedOptions || []), ...(customOptions[f.key] || [])];
+                      // De-dupe in case a custom-added option later appears in the real list too.
+                      const seen = new Set<string>();
+                      const deduped = merged.filter(o => {
+                        if (seen.has(String(o.value))) return false;
+                        seen.add(String(o.value));
+                        return true;
+                      });
+                      return deduped.map(o => {
+                        const values = Array.isArray(formData[f.key]) ? formData[f.key] : [];
+                        const isChecked = values.includes(Number(o.value)) || values.includes(String(o.value));
+                        return (
+                          <label key={o.value} className="flex items-center gap-2 p-2 rounded-xl border border-neutral-100 hover:bg-neutral-50/50 cursor-pointer text-sm">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={e => {
+                                const numVal = Number(o.value);
+                                let newValues;
+                                if (e.target.checked) {
+                                  newValues = [...values, numVal];
+                                } else {
+                                  newValues = values.filter((v: any) => Number(v) !== numVal);
+                                }
+                                handleChange(f.key, newValues);
+                              }}
+                              className="w-4 h-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
+                            />
+                            <span className="text-neutral-700">{o.label}</span>
+                          </label>
+                        );
+                      });
+                    })()}
+                  </div>
+                  {f.allowCustom && f.onCreateCustom && (
+                    <div className="flex items-center gap-2 mt-2">
+                      <input
+                        type="text"
+                        value={customInputs[f.key] || ''}
+                        onChange={e => setCustomInputs(prev => ({ ...prev, [f.key]: e.target.value }))}
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustom(f); } }}
+                        className="input-field flex-1 text-sm"
+                        placeholder={`Not listed? Type a new ${f.label.toLowerCase()} name...`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleAddCustom(f)}
+                        disabled={!customInputs[f.key]?.trim() || customSaving[f.key]}
+                        className="btn btn-secondary text-xs py-1.5 px-3 flex items-center gap-1 shrink-0 disabled:opacity-50"
+                      >
+                        {customSaving[f.key] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                        Add
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : f.type === 'select' ? (
                 (() => {
