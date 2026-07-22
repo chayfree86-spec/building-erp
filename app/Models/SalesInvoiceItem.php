@@ -12,7 +12,7 @@ class SalesInvoiceItem extends Model
     use HasFactory;
 
     protected $fillable = [
-        'invoice_id', 'product_id', 'product_name_snapshot', 'unit_id',
+        'invoice_id', 'product_id', 'brand_id', 'product_name_snapshot', 'unit_id',
         'unit_name_snapshot', 'hsn_code_snapshot', 'quantity', 'rate',
         'discount_amount', 'overall_discount_share', 'taxable_amount',
         'gst_rate', 'cgst_amount', 'sgst_amount', 'igst_amount',
@@ -41,6 +41,11 @@ class SalesInvoiceItem extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function brand(): BelongsTo
+    {
+        return $this->belongsTo(Brand::class);
     }
 
     public function unit(): BelongsTo

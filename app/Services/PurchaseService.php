@@ -30,6 +30,7 @@ class PurchaseService
                     'purchase_item_id' => $item->id,
                     'supplier_id' => $purchase->supplier_id,
                     'product_id' => $item->product_id,
+                    'brand_id' => $item->brand_id,
                     'batch_number' => self::generateBatchNumber($purchase, $item),
                     'purchase_date' => $purchase->purchase_date,
                     'purchase_quantity' => $item->quantity,

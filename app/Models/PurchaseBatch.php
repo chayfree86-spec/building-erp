@@ -13,7 +13,7 @@ class PurchaseBatch extends Model
 
     protected $fillable = [
         'store_id', 'purchase_id', 'purchase_item_id', 'supplier_id',
-        'product_id', 'batch_number', 'purchase_date', 'purchase_quantity',
+        'product_id', 'brand_id', 'batch_number', 'purchase_date', 'purchase_quantity',
         'available_quantity', 'sold_quantity', 'purchase_return_quantity',
         'sales_return_quantity', 'damage_quantity', 'adjustment_quantity',
         'purchase_price', 'selling_price', 'landed_cost', 'gst_rate',
@@ -60,6 +60,11 @@ class PurchaseBatch extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function brand(): BelongsTo
+    {
+        return $this->belongsTo(Brand::class);
     }
 
     public function createdBy(): BelongsTo

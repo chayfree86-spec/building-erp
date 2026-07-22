@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { Select } from '@/components/ui/Select';
 import { DatePicker } from '@/components/ui/DatePicker';
-import { purchasesApi, productsApi, suppliersApi, storesApi, stockApi, categoriesApi } from '@/services/api-endpoints';
+import { purchasesApi, productsApi, suppliersApi, storesApi, categoriesApi } from '@/services/api-endpoints';
 import { useAuth } from '@/features/auth/auth-context';
 import { formatCurrency, getLocalDateString } from '@/utils/format';
 import { handleFormKeyDown } from '@/utils/formNavigation';
@@ -17,6 +17,7 @@ import type { Product, Supplier, GstRate, Category } from '@/types';
 
 const itemSchema = z.object({
   product_id: z.number().min(1, 'Product is required'),
+  brand_id: z.number().optional().default(0),
   unit_id: z.number().optional().default(0),
   quantity: z.number().min(0.001, 'Min 0.001'),
   purchase_price: z.number().min(0, 'Min 0'),
@@ -194,6 +195,7 @@ export function PurchaseNewPage() {
   const addItem = () => {
     setItems([...items, {
       product_id: 0,
+      brand_id: 0,
       unit_id: 0,
       quantity: 1,
       purchase_price: 0,
@@ -223,28 +225,15 @@ export function PurchaseNewPage() {
         if (product) {
           item.unit_id = product.unit_id || 0;
         }
-        // Auto-fill selling price from the product's most recent batch (editable).
-        const pid = Number(value);
-        if (pid) {
-          stockApi.productStock(pid).then(({ data }: any) => {
-            const batches = data?.data?.batches || [];
-            if (batches.length > 0) {
-              const latestBatch = batches[batches.length - 1];
-              const sellPrice = Number(latestBatch.selling_price) || 0;
-              if (sellPrice > 0) {
-                setItems(prevItems => {
-                  const newItems = [...prevItems];
-                  newItems[index] = recalcItem({ ...newItems[index], selling_price: sellPrice });
-                  return newItems;
-                });
-              }
-            }
-          }).catch(() => {});
-        }
+        // Single brand -> auto-pick it; 2+ brands -> leave blank so the user must choose.
+        const brandOptions = product?.brands || [];
+        item.brand_id = brandOptions.length === 1 ? Number(brandOptions[0].id) : 0;
+        // Selling price is NOT auto-filled here — it can vary purchase to
+        // purchase, so the user always enters it fresh.
       }
       updated[index] = recalcItem(item);
       if (field === 'product_id' && Number(value) > 0 && index === prev.length - 1) {
-        updated.push({ product_id: 0, unit_id: 0, quantity: 1, purchase_price: 0, selling_price: 0, gst_rate: 0, discount_amount: 0, taxable_amount: 0, tax_amount: 0, line_total: 0 });
+        updated.push({ product_id: 0, brand_id: 0, unit_id: 0, quantity: 1, purchase_price: 0, selling_price: 0, gst_rate: 0, discount_amount: 0, taxable_amount: 0, tax_amount: 0, line_total: 0 });
       }
       return updated;
     });
@@ -256,6 +245,14 @@ export function PurchaseNewPage() {
     if (validItems.length === 0) {
       toast.error('Add at least one item');
       return;
+    }
+
+    for (const item of validItems) {
+      const product = products.find(p => p.id === Number(item.product_id));
+      if (product?.brands && product.brands.length > 1 && !item.brand_id) {
+        toast.error(`Select a brand for "${product.name}"`);
+        return;
+      }
     }
 
     const payload = {
@@ -272,6 +269,7 @@ export function PurchaseNewPage() {
       total_amount: Math.round(totals.total * 100) / 100,
       items: validItems.map(item => ({
         product_id: item.product_id,
+        brand_id: item.brand_id ? Number(item.brand_id) : null,
         unit_id: item.unit_id ? Number(item.unit_id) : null,
         quantity: Number(item.quantity) || 0,
         purchase_price: Number(item.purchase_price) || 0,
@@ -406,6 +404,7 @@ export function PurchaseNewPage() {
                     <tr className="border-b text-left text-neutral-500">
                       <th className="pb-2 font-medium w-8 px-2">#</th>
                       <th className="pb-2 font-medium px-2">Product</th>
+                      <th className="pb-2 font-medium w-32 px-2">Brand</th>
                       <th className="pb-2 font-medium w-28 px-2">Unit</th>
                       <th className="pb-2 font-medium text-right w-20 px-2">Qty</th>
                       <th className="pb-2 font-medium text-right w-28 px-2">Purch. Price</th>
@@ -437,6 +436,19 @@ export function PurchaseNewPage() {
                               onChange={(val) => updateItem(idx, 'product_id', Number(val))}
                               placeholder="Select..."
                             />
+                          </td>
+                          <td className="py-3 px-2 align-middle">
+                            {(product?.brands?.length || 0) > 0 ? (
+                              <Select
+                                compact
+                                options={product!.brands!.map((b: any) => ({ value: b.id, label: b.name }))}
+                                value={item.brand_id || ''}
+                                onChange={(val) => updateItem(idx, 'brand_id', Number(val))}
+                                placeholder="Select brand..."
+                              />
+                            ) : (
+                              <span className="text-neutral-400 text-xs">-</span>
+                            )}
                           </td>
                           <td className="py-3 px-2 align-middle">
                             <Select
@@ -727,6 +739,20 @@ export function PurchaseNewPage() {
                             placeholder="Select product..."
                           />
                         </div>
+
+                        {/* Brand Dropdown (shown whenever the product has one or more brands) */}
+                        {(product?.brands?.length || 0) > 0 && (
+                          <div>
+                            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Brand</label>
+                            <Select
+                              compact
+                              options={product!.brands!.map((b: any) => ({ value: b.id, label: b.name }))}
+                              value={item.brand_id || ''}
+                              onChange={(val) => updateItem(idx, 'brand_id', Number(val))}
+                              placeholder="Select brand..."
+                            />
+                          </div>
+                        )}
 
                         {/* Unit & Quantity Grid */}
                         <div className="grid grid-cols-2 gap-3">

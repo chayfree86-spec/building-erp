@@ -14,19 +14,23 @@ class FifoStockService
      * @param int $storeId
      * @param int $productId
      * @param float $requiredQuantity
+     * @param int|null $brandId When given, only draw from batches purchased under this
+     *                          brand — a Product can be stocked under multiple Brands
+     *                          and those batches are not interchangeable.
      * @return array Array of ['batch_id', 'quantity', 'purchase_price', 'landed_cost', 'selling_price']
      * @throws \RuntimeException if insufficient stock
      */
-    public static function allocate(int $storeId, int $productId, float $requiredQuantity): array
+    public static function allocate(int $storeId, int $productId, float $requiredQuantity, ?int $brandId = null): array
     {
         if ($requiredQuantity <= 0) {
             throw new \InvalidArgumentException('Required quantity must be greater than zero.');
         }
 
-        return DB::transaction(function () use ($storeId, $productId, $requiredQuantity) {
+        return DB::transaction(function () use ($storeId, $productId, $requiredQuantity, $brandId) {
             // Lock eligible batches for update
             $batches = PurchaseBatch::where('store_id', $storeId)
                 ->where('product_id', $productId)
+                ->when($brandId, fn ($q) => $q->where('brand_id', $brandId))
                 ->where('status', 'active')
                 ->where('available_quantity', '>', 0)
                 ->orderBy('purchase_date', 'asc')

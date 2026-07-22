@@ -16,7 +16,7 @@ class SalesInvoiceController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = SalesInvoice::with(['customer', 'store', 'items', 'createdBy']);
+        $query = SalesInvoice::with(['customer', 'store', 'items.brand', 'createdBy']);
 
         if ($storeId = $request->header('X-Store-Id')) {
             $query->where('store_id', $storeId);
@@ -85,6 +85,7 @@ class SalesInvoiceController extends Controller
             'remarks' => 'nullable|string',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
+            'items.*.brand_id' => 'nullable|exists:brands,id',
             'items.*.product_name_snapshot' => 'nullable|string|max:200',
             'items.*.unit_id' => 'nullable|exists:units,id',
             'items.*.quantity' => 'required|numeric|min:0.001',
@@ -139,6 +140,7 @@ class SalesInvoiceController extends Controller
             SalesInvoiceItem::create([
                 'invoice_id' => $invoice->id,
                 'product_id' => $item['product_id'],
+                'brand_id' => $item['brand_id'] ?? null,
                 'product_name_snapshot' => $item['product_name_snapshot'] ?? $product?->name,
                 'unit_id' => $item['unit_id'] ?? null,
                 'unit_name_snapshot' => $item['unit_name_snapshot'] ?? $unit?->short_name,
@@ -170,7 +172,7 @@ class SalesInvoiceController extends Controller
 
         return response()->json([
             'success' => true, 'message' => 'Sales invoice created & confirmed.',
-            'data' => $invoice->load(['items', 'customer', 'store', 'batchAllocations']),
+            'data' => $invoice->load(['items.brand', 'customer', 'store', 'batchAllocations']),
             'errors' => null,
         ], 201);
     }
@@ -179,7 +181,7 @@ class SalesInvoiceController extends Controller
     {
         return response()->json([
             'success' => true, 'message' => 'Invoice retrieved.',
-            'data' => SalesInvoice::with(['items.product.unit', 'items.unit', 'customer', 'store', 'batchAllocations', 'createdBy'])
+            'data' => SalesInvoice::with(['items.product.unit', 'items.unit', 'items.brand', 'customer', 'store', 'batchAllocations', 'createdBy'])
                 ->findOrFail($id),
             'errors' => null,
         ]);
@@ -240,6 +242,7 @@ class SalesInvoiceController extends Controller
                 
                 $itemPayload = [
                     'product_id' => $itemData['product_id'],
+                    'brand_id' => $itemData['brand_id'] ?? null,
                     'product_name_snapshot' => $itemData['product_name_snapshot'] ?? $product?->name,
                     'unit_id' => $itemData['unit_id'] ?? null,
                     'unit_name_snapshot' => $itemData['unit_name_snapshot'] ?? $unit?->short_name,

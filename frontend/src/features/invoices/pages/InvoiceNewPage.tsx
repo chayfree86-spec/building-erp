@@ -22,6 +22,7 @@ import type { Product, Customer, Category } from '@/types';
 // ─── Schema ───
 const itemSchema = z.object({
   product_id: z.number().min(1, 'Required'),
+  brand_id: z.number().optional().default(0),
   product_name_snapshot: z.string().optional(),
   unit_id: z.number().optional().default(0),
   quantity: z.number().min(0.001, 'Min 0.001'),
@@ -63,6 +64,7 @@ export function InvoiceNewPage() {
   const [items, setItems] = useState<z.infer<typeof itemSchema>[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isGuestMode, setIsGuestMode] = useState(false);
+  const [overallDiscount, setOverallDiscount] = useState(0);
 
   // PWA/Mobile state
   const [showSummarySheet, setShowSummarySheet] = useState(false);
@@ -178,7 +180,29 @@ export function InvoiceNewPage() {
     total: acc.total + (Number(item.line_total) || 0),
   }), { subtotal: 0, discount: 0, taxable: 0, tax: 0, total: 0 });
 
-  const addItem = () => setItems([...items, { product_id: 0, product_name_snapshot: '', unit_id: 0, quantity: 1, rate: 0, gst_rate: 0, discount_amount: 0, taxable_amount: 0, tax_amount: 0, line_total: 0 }]);
+  // Prorate an invoice-level "overall discount" across items by their share of
+  // total taxable amount, then recompute each item's tax on the reduced base
+  // (items can carry different GST rates, so a flat subtraction at the end
+  // would be wrong). Item rows themselves keep showing their own pre-overall
+  // taxable/tax — only the invoice summary and the submitted payload reflect
+  // the net (post-overall-discount) figures, via `overall_discount_share`.
+  const applyOverallDiscount = (list: typeof items, discount: number) => {
+    const rawTaxable = list.reduce((s, i) => s + (Number(i.taxable_amount) || 0), 0);
+    const applied = Math.min(Math.max(discount, 0), rawTaxable);
+    const shares = list.map(item => rawTaxable > 0
+      ? Math.round(((Number(item.taxable_amount) || 0) / rawTaxable) * applied * 100) / 100
+      : 0);
+    const netTaxable = list.reduce((s, item, i) => s + Math.max(0, (Number(item.taxable_amount) || 0) - shares[i]), 0);
+    const netTax = list.reduce((s, item, i) => {
+      const t = Math.max(0, (Number(item.taxable_amount) || 0) - shares[i]);
+      return s + Math.round((t * (Number(item.gst_rate) || 0) / 100) * 100) / 100;
+    }, 0);
+    return { applied, shares, netTaxable, netTax, netTotal: netTaxable + netTax };
+  };
+
+  const { applied: overallDiscountApplied, netTaxable, netTax, netTotal } = applyOverallDiscount(items, overallDiscount);
+
+  const addItem = () => setItems([...items, { product_id: 0, brand_id: 0, product_name_snapshot: '', unit_id: 0, quantity: 1, rate: 0, gst_rate: 0, discount_amount: 0, taxable_amount: 0, tax_amount: 0, line_total: 0 }]);
   const removeItem = (i: number) => setItems(items.filter((_, idx) => idx !== i));
 
   const updateItem = (index: number, field: string, value: any) => {
@@ -193,6 +217,9 @@ export function InvoiceNewPage() {
           item.unit_id = product.unit_id || 0;
           item.product_name_snapshot = product.name;
         }
+        // Single brand -> auto-pick it; 2+ brands -> leave blank so the user must choose.
+        const brandOptions = product?.brands || [];
+        item.brand_id = brandOptions.length === 1 ? Number(brandOptions[0].id) : 0;
         const pid = Number(value);
         if (pid) {
           stockApi.productStock(pid).then(({ data }: any) => {
@@ -213,7 +240,7 @@ export function InvoiceNewPage() {
       }
       updated[index] = recalcItem(item);
       if (field === 'product_id' && Number(value) > 0 && index === prev.length - 1) {
-        updated.push({ product_id: 0, product_name_snapshot: '', unit_id: 0, quantity: 1, rate: 0, gst_rate: 0, discount_amount: 0, taxable_amount: 0, tax_amount: 0, line_total: 0 });
+        updated.push({ product_id: 0, brand_id: 0, product_name_snapshot: '', unit_id: 0, quantity: 1, rate: 0, gst_rate: 0, discount_amount: 0, taxable_amount: 0, tax_amount: 0, line_total: 0 });
       }
       return updated;
     });
@@ -230,6 +257,15 @@ export function InvoiceNewPage() {
     }
     const validItems = items.filter(i => Number(i.product_id) > 0);
     if (validItems.length === 0) { toast.error('Add at least one item'); return; }
+
+    for (const item of validItems) {
+      const product = products.find(p => p.id === Number(item.product_id));
+      if (product?.brands && product.brands.length > 1 && !item.brand_id) {
+        toast.error(`Select a brand for "${product.name}"`);
+        return;
+      }
+    }
+
     const customer = isGuestMode ? null : customers.find(c => c.id === data.customer_id);
 
     const vTotals = validItems.reduce((acc, item) => ({
@@ -239,6 +275,9 @@ export function InvoiceNewPage() {
       tax: acc.tax + (Number(item.tax_amount) || 0),
       total: acc.total + (Number(item.line_total) || 0),
     }), { subtotal: 0, discount: 0, taxable: 0, tax: 0, total: 0 });
+
+    const { applied: vOverallDiscount, shares: vOverallShares, netTaxable: vNetTaxable, netTax: vNetTax, netTotal: vNetTotal } =
+      applyOverallDiscount(validItems, overallDiscount);
 
     createMutation.mutate({
       store_id: resolvedStoreId,
@@ -254,20 +293,21 @@ export function InvoiceNewPage() {
       auto_confirm: autoConfirm,
       subtotal: Math.round(vTotals.subtotal * 100) / 100,
       item_discount: Math.round(vTotals.discount * 100) / 100,
-      overall_discount: 0,
-      taxable_amount: Math.round(vTotals.taxable * 100) / 100,
-      cgst_amount: 0, sgst_amount: 0, igst_amount: Math.round(vTotals.tax * 100) / 100,
-      tax_amount: Math.round(vTotals.tax * 100) / 100,
+      overall_discount: Math.round(vOverallDiscount * 100) / 100,
+      taxable_amount: Math.round(vNetTaxable * 100) / 100,
+      cgst_amount: 0, sgst_amount: 0, igst_amount: Math.round(vNetTax * 100) / 100,
+      tax_amount: Math.round(vNetTax * 100) / 100,
       round_off: 0,
-      total_amount: Math.round(vTotals.total * 100) / 100,
-      items: validItems.map(item => ({
+      total_amount: Math.round(vNetTotal * 100) / 100,
+      items: validItems.map((item, i) => ({
         product_id: item.product_id,
+        brand_id: item.brand_id ? Number(item.brand_id) : null,
         product_name_snapshot: item.product_name_snapshot || undefined,
         unit_id: item.unit_id ? Number(item.unit_id) : null,
         quantity: Number(item.quantity) || 0,
         rate: Number(item.rate) || 0,
         discount_amount: Number(item.discount_amount) || 0,
-        overall_discount_share: 0,
+        overall_discount_share: vOverallShares[i] || 0,
         taxable_amount: Number(item.taxable_amount) || 0,
         gst_rate: Number(item.gst_rate) || 0,
         tax_amount: Number(item.tax_amount) || 0,
@@ -613,6 +653,7 @@ export function InvoiceNewPage() {
                     <tr className="border-b text-left text-neutral-500 font-semibold text-xs">
                       <th className="pb-2 w-8 px-2">#</th>
                       <th className="pb-2 px-2">Product</th>
+                      <th className="pb-2 w-32 px-2">Brand</th>
                       <th className="pb-2 w-28 px-2">Unit</th>
                       <th className="pb-2 text-right w-20 px-2">Qty</th>
                       <th className="pb-2 text-right w-24 px-2">Rate</th>
@@ -659,6 +700,19 @@ export function InvoiceNewPage() {
                                 onChange={(e) => updateItem(idx, 'product_name_snapshot', e.target.value)}
                                 placeholder="Enter custom description..."
                               />
+                            )}
+                          </td>
+                          <td className="py-3 px-2 align-middle">
+                            {(product?.brands?.length || 0) > 0 ? (
+                              <Select
+                                compact
+                                options={product!.brands!.map((b: any) => ({ value: b.id, label: b.name }))}
+                                value={item.brand_id || ''}
+                                onChange={(val) => updateItem(idx, 'brand_id', Number(val))}
+                                placeholder="Select brand..."
+                              />
+                            ) : (
+                              <span className="text-neutral-400 text-xs">-</span>
                             )}
                           </td>
                           <td className="py-3 px-2 align-middle">
@@ -729,7 +783,21 @@ export function InvoiceNewPage() {
                           />
                         )}
                       </div>
-                      
+
+                      {/* Brand Dropdown (shown whenever the product has one or more brands) */}
+                      {(product?.brands?.length || 0) > 0 && (
+                        <div>
+                          <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Brand</label>
+                          <Select
+                            compact
+                            options={product!.brands!.map((b: any) => ({ value: b.id, label: b.name }))}
+                            value={item.brand_id || ''}
+                            onChange={(val) => updateItem(idx, 'brand_id', Number(val))}
+                            placeholder="Select brand..."
+                          />
+                        </div>
+                      )}
+
                        <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="text-[10px] font-bold text-neutral-405 uppercase tracking-wider block mb-1">Unit</label>
@@ -821,10 +889,21 @@ export function InvoiceNewPage() {
             <div className="hidden md:block mt-6 border-t pt-4 flex justify-end">
               <div className="w-72 space-y-2 text-sm">
                 <div className="flex justify-between text-neutral-600"><span>Subtotal</span><span className="tabular-nums font-medium">{formatCurrency(totals.subtotal)}</span></div>
-                <div className="flex justify-between text-neutral-600"><span>Discount</span><span className="tabular-nums text-red-600 font-medium">-{formatCurrency(totals.discount)}</span></div>
-                <div className="flex justify-between text-neutral-600"><span>Taxable</span><span className="tabular-nums font-medium">{formatCurrency(totals.taxable)}</span></div>
-                <div className="flex justify-between text-neutral-600"><span>Tax (IGST)</span><span className="tabular-nums font-medium">{formatCurrency(totals.tax)}</span></div>
-                <div className="flex justify-between font-bold text-lg border-t pt-2 text-neutral-900"><span>Total</span><span className="tabular-nums">{formatCurrency(totals.total)}</span></div>
+                <div className="flex justify-between text-neutral-600"><span>Item Discount</span><span className="tabular-nums text-red-600 font-medium">-{formatCurrency(totals.discount)}</span></div>
+                <div className="flex justify-between items-center text-neutral-600">
+                  <span>Overall Discount</span>
+                  <input
+                    type="number" inputMode="decimal" min="0" step="0.01"
+                    className="input-field w-28 text-right text-sm !py-1 !px-2"
+                    value={overallDiscount || ''}
+                    onChange={(e) => setOverallDiscount(Number(e.target.value) || 0)}
+                    onFocus={(e) => e.target.select()}
+                    placeholder="0"
+                  />
+                </div>
+                <div className="flex justify-between text-neutral-600"><span>Taxable</span><span className="tabular-nums font-medium">{formatCurrency(netTaxable)}</span></div>
+                <div className="flex justify-between text-neutral-600"><span>Tax (IGST)</span><span className="tabular-nums font-medium">{formatCurrency(netTax)}</span></div>
+                <div className="flex justify-between font-bold text-lg border-t pt-2 text-neutral-900"><span>Total</span><span className="tabular-nums">{formatCurrency(netTotal)}</span></div>
               </div>
             </div>
           )}
@@ -852,7 +931,7 @@ export function InvoiceNewPage() {
           <div className="flex justify-between items-center w-full">
             <div className="flex flex-col">
               <span className="text-[10px] text-neutral-400 font-extrabold uppercase tracking-wider">{items.filter(i => Number(i.product_id) > 0).length} Items</span>
-              <span className="text-xl font-black text-indigo-600 tabular-nums tracking-tight">{formatCurrency(totals.total)}</span>
+              <span className="text-xl font-black text-indigo-600 tabular-nums tracking-tight">{formatCurrency(netTotal)}</span>
             </div>
             <button
               type="button"
@@ -888,10 +967,21 @@ export function InvoiceNewPage() {
             </div>
             <div className="space-y-3 text-sm">
               <div className="flex justify-between text-neutral-500"><span>Subtotal</span><span className="tabular-nums">{formatCurrency(totals.subtotal)}</span></div>
-              <div className="flex justify-between text-neutral-500"><span>Discount</span><span className="tabular-nums text-red-600">-{formatCurrency(totals.discount)}</span></div>
-              <div className="flex justify-between text-neutral-500"><span>Taxable Amount</span><span className="tabular-nums">{formatCurrency(totals.taxable)}</span></div>
-              <div className="flex justify-between text-neutral-500"><span>GST (IGST)</span><span className="tabular-nums">{formatCurrency(totals.tax)}</span></div>
-              <div className="flex justify-between font-bold text-base text-neutral-900 border-t pt-2 mt-2"><span>Grand Total</span><span className="tabular-nums">{formatCurrency(totals.total)}</span></div>
+              <div className="flex justify-between text-neutral-500"><span>Item Discount</span><span className="tabular-nums text-red-600">-{formatCurrency(totals.discount)}</span></div>
+              <div className="flex justify-between items-center text-neutral-500">
+                <span>Overall Discount</span>
+                <input
+                  type="number" inputMode="decimal" min="0" step="0.01"
+                  className="input-field w-24 text-right text-sm"
+                  value={overallDiscount || ''}
+                  onChange={(e) => setOverallDiscount(Number(e.target.value) || 0)}
+                  onFocus={(e) => e.target.select()}
+                  placeholder="0"
+                />
+              </div>
+              <div className="flex justify-between text-neutral-500"><span>Taxable Amount</span><span className="tabular-nums">{formatCurrency(netTaxable)}</span></div>
+              <div className="flex justify-between text-neutral-500"><span>GST (IGST)</span><span className="tabular-nums">{formatCurrency(netTax)}</span></div>
+              <div className="flex justify-between font-bold text-base text-neutral-900 border-t pt-2 mt-2"><span>Grand Total</span><span className="tabular-nums">{formatCurrency(netTotal)}</span></div>
             </div>
             <div className="grid grid-cols-2 gap-3 pt-3">
               <button

@@ -41,6 +41,7 @@ class InvoiceService
                     storeId: $invoice->store_id,
                     productId: $item->product_id,
                     requiredQuantity: (float) $item->quantity,
+                    brandId: $item->brand_id,
                 );
 
                 foreach ($allocations as $alloc) {
@@ -78,6 +79,7 @@ class InvoiceService
                         'invoice_id' => $invoice->id,
                         'invoice_item_id' => $item->id,
                         'product_id' => $item->product_id,
+                        'brand_id' => $item->brand_id,
                         'batch_id' => $batch->id,
                         'quantity' => $alloc['quantity'],
                         'purchase_price' => $alloc['purchase_price'],

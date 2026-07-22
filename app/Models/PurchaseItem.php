@@ -11,7 +11,7 @@ class PurchaseItem extends Model
     use HasFactory;
 
     protected $fillable = [
-        'purchase_id', 'product_id', 'unit_id', 'quantity',
+        'purchase_id', 'product_id', 'brand_id', 'unit_id', 'quantity',
         'purchase_price', 'selling_price', 'discount_amount',
         'taxable_amount', 'gst_rate', 'tax_amount',
         'additional_cost_share', 'landed_cost', 'line_total',
@@ -38,6 +38,11 @@ class PurchaseItem extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function brand(): BelongsTo
+    {
+        return $this->belongsTo(Brand::class);
     }
 
     public function unit(): BelongsTo

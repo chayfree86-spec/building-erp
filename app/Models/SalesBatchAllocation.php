@@ -11,7 +11,7 @@ class SalesBatchAllocation extends Model
     use HasFactory;
 
     protected $fillable = [
-        'store_id', 'invoice_id', 'invoice_item_id', 'product_id',
+        'store_id', 'invoice_id', 'invoice_item_id', 'product_id', 'brand_id',
         'batch_id', 'quantity', 'purchase_price', 'landed_cost',
         'selling_price', 'discount_share', 'taxable_amount', 'tax_amount',
         'cost_amount', 'sale_amount', 'profit_amount',
@@ -48,6 +48,11 @@ class SalesBatchAllocation extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function brand(): BelongsTo
+    {
+        return $this->belongsTo(Brand::class);
     }
 
     public function batch(): BelongsTo

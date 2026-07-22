@@ -13,7 +13,7 @@ class PurchaseController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Purchase::with(['supplier', 'store', 'items', 'createdBy']);
+        $query = Purchase::with(['supplier', 'store', 'items.brand', 'createdBy']);
 
         if ($storeId = $request->header('X-Store-Id')) {
             $query->where('store_id', $storeId);
@@ -58,6 +58,7 @@ class PurchaseController extends Controller
             'remarks' => 'nullable|string',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
+            'items.*.brand_id' => 'nullable|exists:brands,id',
             'items.*.unit_id' => 'nullable|exists:units,id',
             'items.*.quantity' => 'required|numeric|min:0.001',
             'items.*.purchase_price' => 'required|numeric|min:0',
@@ -109,6 +110,7 @@ class PurchaseController extends Controller
         foreach ($request->items as $item) {
             $purchase->items()->create([
                 'product_id' => $item['product_id'],
+                'brand_id' => $item['brand_id'] ?? null,
                 'unit_id' => $item['unit_id'] ?? null,
                 'quantity' => $item['quantity'],
                 'purchase_price' => $item['purchase_price'],
@@ -134,14 +136,14 @@ class PurchaseController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Purchase created successfully.',
-            'data' => $purchase->load(['items', 'supplier', 'store']),
+            'data' => $purchase->load(['items.brand', 'supplier', 'store']),
             'errors' => null,
         ], 201);
     }
 
     public function show(int $id): JsonResponse
     {
-        $purchase = Purchase::with(['items.product.unit', 'items.unit', 'supplier', 'store', 'batches', 'createdBy'])->findOrFail($id);
+        $purchase = Purchase::with(['items.product.unit', 'items.unit', 'items.brand', 'supplier', 'store', 'batches.brand', 'createdBy'])->findOrFail($id);
 
         return response()->json([
             'success' => true,
@@ -220,7 +222,7 @@ class PurchaseController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Purchase updated.',
-            'data' => $purchase->load(['items', 'supplier', 'store']),
+            'data' => $purchase->load(['items.brand', 'supplier', 'store']),
             'errors' => null,
         ]);
     }
