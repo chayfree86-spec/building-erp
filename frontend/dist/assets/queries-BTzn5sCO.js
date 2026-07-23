@@ -1,1 +1,0 @@
-import{t as e}from"./useQuery-DN8K80GZ.js";import{S as t,s as n}from"./api-endpoints-99mZMf8X.js";function r(t){return e({queryKey:[`customers`,t],queryFn:async()=>{let{data:e}=await n.list(t);return e}})}function i(n){return e({queryKey:[`suppliers`,n],queryFn:async()=>{let{data:e}=await t.list(n);return e}})}export{i as n,r as t};
